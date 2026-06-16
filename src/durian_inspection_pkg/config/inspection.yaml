@@ -1,0 +1,18 @@
+/durian_inspection_node:
+  ros__parameters:
+    camera:
+      fx: 525.0
+      fy: 525.0
+      cx: 320.0
+      cy: 240.0
+      scale_factor: 0.1
+    robot:
+      camera_offset_x: 0.1
+    lidar:
+      use_normalization: true        # 设为 true 可自动处理各种模型的原始输出
+      depth_to_meter_scale: 20.0
+      angle_min: -3.14159
+      angle_max: 3.14159
+      range_min: 0.1
+      range_max: 20.0
+      depth_offset_meter: 0.5

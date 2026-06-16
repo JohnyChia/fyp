@@ -1,0 +1,32 @@
+slam_toolbox:
+  ros__parameters:
+    mode: mapping
+    
+    # 核心修改：如果你在仿真中，建议设为 true，这样定位极其稳定
+    use_odom: true 
+    odom_data_synced: true # 仿真中通常是同步的
+    
+    map_frame: map
+    odom_frame: odom
+    base_frame: base_link
+    
+    publish_tf: true
+    odom_tf_admissible: true
+    
+    # 稳定化参数
+    map_update_interval: 2.0 # 稍微快一点，但不要太快
+    resolution: 0.05
+    linear_update: 0.1      # 机器人每移动 0.1m 才更新一次
+    angular_update: 0.05
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_time_interval: 0.5
+    
+    # 将 minimum_score 从 0.0 改为 50.0 或更高
+    # 0.0 会导致算法接受所有糟糕的匹配，造成地图“模糊化”和跳变
+    minimum_score: 50.0 
+    
+    # 增加 buffer 防止瞬间波动导致系统崩溃
+    scan_buffer_size: 20
+    tf_buffer_duration: 30.0
+    transform_timeout: 0.5

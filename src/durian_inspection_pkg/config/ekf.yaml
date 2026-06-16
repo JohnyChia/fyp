@@ -1,0 +1,26 @@
+ekf_filter_node:
+  ros__parameters:
+    frequency: 20.0
+    two_d_mode: true
+    use_sim_time: true
+    transform_timeout: 0.2
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom
+
+    publish_tf: false
+
+    odom0: /odom
+    odom0_config: [
+      true,  true,  false,
+      false, false, false,
+      true,  true,  false,
+      false, false, false,
+      false, false, false
+    ]
+
+    odom0_queue_size: 5
+    odom0_differential: false
+    odom0_relative: false
