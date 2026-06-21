@@ -1,3 +1,6 @@
+import os
+import time
+
 from std_msgs.msg import Header
 import rclpy
 from rclpy.node import Node
@@ -17,21 +20,18 @@ import tf2_geometry_msgs
 import sensor_msgs_py.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2, PointField
 from geometry_msgs.msg import PointStamped
+from rclpy.callback_groups import ReentrantCallbackGroup
 
 class VisionNode(Node):
     def __init__(self):
+        os.environ["LD_LIBRARY_PATH"] = "/usr/local/cuda/lib64:" + os.environ.get("LD_LIBRARY_PATH", "")
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
         super().__init__('vision_node')
         self.models_ready = False
-        
-        # 1. 基础配置与变量声明
-        self.bridge = CvBridge()
-        self.frame_queue = queue.Queue(maxsize=1)
-        self.inference_lock = threading.Lock()
-        
-        # 2. 声明参数（必须先声明）
         self.declare_parameter("model_tree_path", "/home/johny/durian_ws/models/durian_tree/best_v8.pt")
         self.declare_parameter("model_leaf_path", "/home/johny/durian_ws/models/durian_leaf/best_v26.pt")
-
+        
         self.declare_parameters(
             namespace='',
             parameters=[
@@ -52,8 +52,7 @@ class VisionNode(Node):
             'd197': {'name': 'Durian 197', 'is_disease': False},
             'd2':   {'name': 'Durian 2', 'is_disease': False},
             'd24':  {'name': 'Durian 24', 'is_disease': False},
-            
-            # 将模型三的病害名称与药物信息绑定
+
             'Leaf_Algal':           {'name': 'Algal Spot', 'remedy': 'Copper-based', 'severity': 0.4},
             'Leaf_Blight':          {'name': 'Blight', 'remedy': 'Difenoconazole', 'severity': 0.8},
             'Leaf_Colletotrichum':  {'name': 'Anthracnose', 'remedy': 'Azoxystrobin', 'severity': 0.6},
@@ -62,7 +61,6 @@ class VisionNode(Node):
             'Leaf_Rhizoctonia':     {'name': 'Rhizoctonia', 'remedy': 'Jinggangmycin', 'severity': 0.8}
         }
 
-        # 补全这个缺失的属性，解决 Attribute Error
         self.durian_type = {
             0: 'd101',
             1: 'd175',
@@ -71,7 +69,6 @@ class VisionNode(Node):
             4: 'd24'
         }
         
-        # 还要保留你的严重程度映射（detect_leaf_disease 需要它）
         self.severity_map = {
             'Leaf_Healthy': 0.0,
             'Leaf_Algal': 0.4,
@@ -81,8 +78,6 @@ class VisionNode(Node):
             'Leaf_Rhizoctonia': 0.8
         }
 
-        
-        # 3. 初始化模型占位符 (不要在这里调用 load)
         self.model_tree = None
         self.model_leaf = None
         self.midas = None
@@ -92,166 +87,167 @@ class VisionNode(Node):
         self.pixel_to_m = 0.002
         self.tree_tracker = {}
         self.next_tree_id = 0
+        self.last_depth_map = None
+        self.depth_update_count = 0 
+
+        self.bridge = CvBridge()
+        self.frame_queue = queue.Queue(maxsize=1)
+        self.inference_lock = threading.Lock()
+        self._cached_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.get_logger().info(f"深度估计计算单元已初始化为: {self._cached_device}")
+        self.load_all_models()
 
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         
-        # 4. 初始化通信
-        qos = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, 
-                         durability=DurabilityPolicy.VOLATILE, depth=100)
-        
+        self.qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT, 
+            durability=DurabilityPolicy.VOLATILE, 
+            depth=100
+        )
+
+        self.scan_qos_profile = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE, 
+            durability=DurabilityPolicy.VOLATILE, 
+            depth=100
+        )
+
         self.depth_pub = self.create_publisher(Image, '/camera/depth_image', 10)
         self.marker_pub = self.create_publisher(MarkerArray, '/tree_markers', 10)
         self.cloud_pub = self.create_publisher(PointCloud2, '/tree_cloud', 10)
-        self.scan_pub = self.create_publisher(LaserScan, '/scan', qos)
-        self.create_subscription(Image, '/camera/image_raw', self.image_callback, qos)
-        
-        # 5. 最后再启动线程 (确保所有参数和对象已就绪)
-        threading.Thread(target=self.processing_worker, daemon=True).start()
+        self.scan_pub = self.create_publisher(LaserScan, '/scan_processed', self.scan_qos_profile)
 
-    def ensure_models_loaded(self):
-        if getattr(self, 'models_ready', False):
-            return True
-        
-        # 直接硬编码路径，完全去掉 torch.hub 的网络请求行为
+        self.cb_group = ReentrantCallbackGroup()
+        self.create_subscription(Image, '/camera/image_raw', self.image_callback, self.qos_profile,callback_group=self.cb_group)
+
+        self.timer = self.create_timer(0.033, self.timer_callback, callback_group=self.cb_group)
+
+    def load_all_models(self):
         try:
-            self.get_logger().info("正在尝试离线加载模型...")
+            self.get_logger().info("Loading all models onto GPU...")
+            device = torch.device("cuda:0")
 
-            model_type = "MiDaS_small"
-            midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-            self.transform = midas_transforms.small_transform if model_type == "MiDaS_small" else midas_transforms.dpt_transform
-                        
-            # 强制从本地路径加载，不要使用 torch.hub 的在线下载能力
-            # 确保 /home/johny/.cache/torch/hub/intel-isl_MiDaS_master 文件夹下确实有模型文件
-            self.midas = torch.hub.load("/home/johny/.cache/torch/hub/intel-isl_MiDaS_master", 
-                                        "MiDaS_small", 
-                                        source='local', 
-                                        trust_repo=True).eval()
-            
-            model_path = self.get_parameter('model_tree_path').value
-            leaf_path = self.get_parameter('model_leaf_path').value
-            self.model_tree = YOLO(model_path)
-            self.model_leaf = YOLO(leaf_path)
+            self.midas = torch.hub.load("intel-isl/MiDaS", "MiDaS_small", trust_repo=True).to(device).eval()
+            midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
+            self.transform = midas_transforms.small_transform
+
+            self.model_tree = YOLO(self.get_parameter('model_tree_path').value).to(device)
+            self.model_leaf = YOLO(self.get_parameter('model_leaf_path').value).to(device)
             
             self.models_ready = True
-            return True
+            self.get_logger().info("Model loading complete!")
         except Exception as e:
-            self.get_logger().error(f"模型加载彻底失败: {e}")
-            return False
+            self.get_logger().error(f"Critical error: Failed to load models: {e}")
+
+    def ensure_models_loaded(self):
+        with self.inference_lock:
+            if getattr(self, 'models_ready', False):
+                return True
+            
+            try:
+                self.get_logger().info("Starting to load models onto GPU")
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                
+                self.midas = torch.hub.load("/home/johny/.cache/torch/hub/intel-isl_MiDaS_master", 
+                                            "MiDaS_small", source='local', trust_repo=True).to(device).eval()
+
+                midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", source='github', trust_repo=True)
+                self.transform = midas_transforms.small_transform
+                self.model_tree = YOLO(self.get_parameter('model_tree_path').value).to(device)
+                self.model_leaf = YOLO(self.get_parameter('model_leaf_path').value).to(device)
+                
+                self.models_ready = True
+                self.get_logger().info("All models successfully loaded onto GPU")
+                return True
+            except Exception as e:
+                self.get_logger().error(f"An error occurred while loading models: {str(e)}")
+                return False
+
+    def processing_worker(self):
+        while rclpy.ok():
+            try:
+                frame, stamp = self.frame_queue.get(timeout=1.0)
+                if self.models_ready:
+                    self.run_pipeline_logic(frame, stamp)
+            except queue.Empty:
+                continue
         
     def image_callback(self, msg):
         try:
-            # 尝试非阻塞入队，如果队列满则丢弃旧帧，保证实时性
             if self.frame_queue.full():
                 self.frame_queue.get_nowait()
             self.frame_queue.put_nowait((self.bridge.imgmsg_to_cv2(msg, "bgr8"), msg.header.stamp))
         except Exception as e:
             self.get_logger().error(f"Callback 错误: {e}")
 
-    def processing_worker(self):
-        while rclpy.ok():
-            try:
-                frame, stamp = self.frame_queue.get(timeout=1.0)
-                
-                # --- 增加：严苛的模型就绪检查 ---
-                if not self.ensure_models_loaded():
-                    self.get_logger().warn("模型尚未准备就绪，无法执行检测任务。")
-                    continue 
-                # 检查模型是否真的不为 None
-                if self.model_tree is None:
-                    self.get_logger().error("model_tree 为空，跳过！")
-                    continue
-                # ------------------------------
-
-                depth_map = self.compute_depth(frame)
-                self.publish_scan(depth_map)
-                
-                self.frame_count += 1
-                if self.frame_count >= 5:
-                    with self.inference_lock:
-                        self.detect_and_publish_trees(frame, depth_map, stamp)
-                    self.frame_count = 0
-            except Exception as e:
-                self.get_logger().error(f"Worker 循环异常: {str(e)}")
+    def timer_callback(self):
+        try:
+            if not self.frame_queue.empty():
+                frame, stamp = self.frame_queue.get_nowait()
+                if self.models_ready:
+                    self.run_pipeline_logic(frame, stamp)
+        except Exception as e:
+            self.get_logger().error(f"Pipeline error: {e}")
 
     def run_pipeline_logic(self, frame, stamp):
-        # 注意：这里不再递归调用自己，只负责执行算法
-        
-        # 1. 总是执行深度推理（保证避障实时性）
-        depth_map = self.compute_depth(frame)
-       
-        # 2. 只有每隔 N 帧才执行重型任务（检测树木）
-        self.frame_count += 1
-        if self.frame_count % 5 == 0:
+        self.depth_update_count += 1
+        if self.depth_update_count >= 3:
+            self.last_depth_map = self.compute_depth(frame)
+            self.depth_update_count = 0
+
             with self.inference_lock:
-                self.detect_and_publish_trees(frame, depth_map,stamp)
-                self.frame_count = 0
+                self.detect_and_publish_trees(frame, self.last_depth_map)
+
+        if self.last_depth_map is not None:
+            self.publish_scan(self.last_depth_map)
 
     def compute_depth(self, frame):
-        # 1. 基础检查
         if self.midas is None or self.transform is None:
             return np.zeros((frame.shape[0], frame.shape[1]), dtype=np.float32)
 
         try:
-            # 2. 预处理
-            small_frame = cv2.resize(frame, (320, 240)) 
+            small_frame = cv2.resize(frame, (256, 256))
             img_rgb = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-            
-            # 3. 维度校准
             input_tensor = self.transform(img_rgb)
-            
-            # 关键修复：强制将 input_tensor 变为 [1, 3, 240, 320]
-            # 如果它是 [1, 1, 3, 240, 320] 或 [1, 3, 240, 320]，我们统一处理
-            if input_tensor.dim() > 4:
-                input_tensor = input_tensor.view(-1, 3, 240, 320)
-            elif input_tensor.dim() == 3:
+
+            if input_tensor.dim() == 3:
                 input_tensor = input_tensor.unsqueeze(0)
+            elif input_tensor.dim() == 5:
+                input_tensor = input_tensor.squeeze(0)
             
-            # 4. 推理
+            input_tensor = input_tensor.to(self._cached_device)
+            
             with torch.no_grad():
-                prediction = self.midas(input_tensor)
+                prediction = self.midas.to(self._cached_device)(input_tensor)
                 
-                # resize 回原图大小
-                # 注意：如果 prediction 是 [1, 1, H, W]，则不需要再 unsqueeze(1)
-                if prediction.dim() == 3:
-                    prediction = prediction.unsqueeze(1)
-                    
                 depth = torch.nn.functional.interpolate(
-                    prediction, 
-                    size=frame.shape[:2], 
-                    mode="bicubic", 
-                    align_corners=False
+                    prediction.unsqueeze(1) if prediction.dim() == 3 else prediction, 
+                    size=(frame.shape[0], frame.shape[1]), 
+                    mode="nearest"
                 ).squeeze().cpu().numpy()
             
             return depth
             
         except Exception as e:
-            self.get_logger().error(f"深度计算异常: {e}")
+            self.get_logger().error(f"Critical error: Exception in depth processing: {e}")
             return np.zeros((frame.shape[0], frame.shape[1]), dtype=np.float32)
         
     def publish_scan(self, depth):
-        # 1. 提取中心行并进行中值滤波（消除异常 inf 干扰）
         row = depth[depth.shape[0] // 2].astype(np.float32)
         row = scipy.ndimage.median_filter(row, size=5) 
         
-        # 2. 归一化与缩放
         if self.get_parameter('lidar_use_normalization').value:
             row = (row - np.min(row)) / (np.max(row) - np.min(row) + 1e-6)
         
         distances = row * self.get_parameter('lidar_depth_to_meter_scale').value
-        
-        # 3. 关键修复：确保 ranges 的数量与预期的扫描点数匹配
-        # 假设我们想要发布 360 个点，如果 row 只有 640 个点，我们需要插值
         num_scans = 360 
         indices = np.linspace(0, len(distances) - 1, num_scans)
         interpolated_ranges = np.interp(indices, np.arange(len(distances)), distances)
-        
-        # 4. 动态数据清洗：只把真正超出物理极限的设为 inf
+
         min_range = float(self.get_parameter('lidar_range_min').value)
         max_range = float(self.get_parameter('lidar_range_max').value)
         cleaned_ranges = np.clip(interpolated_ranges, min_range, max_range)
-        
-        # 5. 构建并发布
+
         scan = LaserScan()
         scan.header.stamp = self.get_clock().now().to_msg()
         scan.header.frame_id = "laser"
@@ -261,14 +257,10 @@ class VisionNode(Node):
         scan.range_min = min_range
         scan.range_max = max_range
         scan.ranges = cleaned_ranges.tolist()
-
-        print("SCAN TIME:", scan.header.stamp)
-
         self.scan_pub.publish(scan)
 
-    def detect_and_publish_trees(self, frame, depth_map, stamp):
+    def detect_and_publish_trees(self, frame, depth_map):
         marker_array = MarkerArray()
-
         delete_marker = Marker()
         delete_marker.action = Marker.DELETEALL
         delete_marker.ns = "durian_trees"
@@ -279,47 +271,36 @@ class VisionNode(Node):
         delete_text.ns = "durian_info_text"
         marker_array.markers.append(delete_text)
 
+        try:
+            trans = self.tf_buffer.lookup_transform("map", "camera_link", rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=0.1))
+        except Exception as e:
+            self.get_logger().warn(f"Failed to get TF transform: {e}")
+            return
+
         results = self.model_tree(frame, verbose=False)
         height, width = frame.shape[:2]
+        current_time = self.get_clock().now().to_msg()
 
         for box in results[0].boxes:
             if box.conf < 0.4: continue
             
-            # 1. 计算相机坐标系下的相对位置
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
             cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
             depth_val = depth_map[min(cy, height - 1), min(cx, width - 1)]
             normalized_depth = (depth_val - np.min(depth_map)) / (np.max(depth_map) - np.min(depth_map) + 1e-6)
-            
-            # 这是相机系下的坐标
-            camera_x = float(0.5 + normalized_depth * self.depth_mult)
-            camera_y = float((cx - width/2) * self.pixel_to_m)
-            
-            # 2. 将坐标封装为 PointStamped
+
             pt = PointStamped()
-            pt.header.frame_id = "camera_link" # 假设你的相机坐标系名为 camera_link
-            pt.header.stamp = stamp
-            pt.point.x = camera_x
-            pt.point.y = camera_y
+            pt.header.frame_id = "camera_link"
+            pt.header.stamp = current_time
+            pt.point.x = float(0.5 + normalized_depth * self.depth_mult)
+            pt.point.y = float((cx - width/2) * self.pixel_to_m)
             pt.point.z = 0.0
 
-            # 3. 执行 TF 转换
-            try:
-                # 等待 TF 转换可用
-                if self.tf_buffer.can_transform("map", "camera_link", stamp, timeout=rclpy.duration.Duration(seconds=0.1)):
-                    map_pt = self.tf_buffer.transform(pt, "map")
-                    real_x = map_pt.point.x
-                    real_y = map_pt.point.y
-                else:
-                    self.get_logger().warn("TF 转换失败，跳过该帧")
-                    continue
-            except Exception as e:
-                self.get_logger().error(f"TF 异常: {e}")
-                continue
-            
+            map_pt = tf2_geometry_msgs.do_transform_point(pt, trans)
+            real_x, real_y = map_pt.point.x, map_pt.point.y
+
             matched_id = None
             for tid, (tx, ty) in self.tree_tracker.items():
-                # 距离判断使用 map 坐标
                 if np.sqrt((real_x - tx)**2 + (real_y - ty)**2) < 0.5:
                     matched_id = tid
                     break
@@ -328,14 +309,12 @@ class VisionNode(Node):
                 matched_id = self.next_tree_id
                 self.next_tree_id += 1
             
-            # 存储坐标也使用 map 坐标
             self.tree_tracker[matched_id] = (real_x, real_y)
-            
-            # 传入 real_x, real_y
-            self.process_tree(frame, box, matched_id, marker_array, stamp, real_x, real_y)
+            self.process_tree(frame, box, matched_id, marker_array, current_time, real_x, real_y)
 
-        if len(marker_array.markers) > 0:
+        if len(marker_array.markers) > 2:
             self.marker_pub.publish(marker_array)
+       
 
     def detect_durian_type(self, crop):
 
@@ -351,7 +330,10 @@ class VisionNode(Node):
         if len(result[0].boxes) == 0:
             return "Unknown"
 
-        class_id = int(result[0].boxes.cls[0])
+        if len(result[0].boxes) == 0:
+            return "Unknown"
+
+        class_id = int(result[0].boxes.cls.cpu().numpy()[0])
 
         return self.durian_type.get(
             class_id,
@@ -363,32 +345,30 @@ class VisionNode(Node):
         height, width = frame.shape[:2]
         x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
         
-        durian_type = "d101"
+        durian_type_id = "d101"
         d_name = "Healthy"
         severity = 0.0
         
         if self.model_leaf:
             crop = frame[max(0,y1):min(height,y2), max(0,x1):min(width,x2)]
             if crop.size > 0:
-                # 1. 获取品种 ID (d101, d175等)
                 durian_type_id = self.detect_durian_type(crop)
-                # 2. 获取病害名称 (Leaf_Algal等)
                 d_name, severity = self.detect_leaf_disease(crop)
 
-        # 核心：利用 tree_config 获取显示名称和药物
         type_info = self.tree_config.get(durian_type_id, {'name': 'Unknown'})
 
-        self.tree_tracker[index] = (real_x, real_y)
-        self.publish_trees_as_cloud(stamp)
-        
-        # --- 新增：过滤 Unknown ---
+        old_tree = self.tree_tracker.get(index)
+
+        if old_tree is not None:
+            real_x = 0.7 * old_tree[0] + 0.3 * real_x
+            real_y = 0.7 * old_tree[1] + 0.3 * real_y
+        self.publish_trees_as_cloud()
+
         if type_info.get('name') == 'Unknown':
             self.get_logger().info(f"Skipping Unknown tree at index {index}")
-            return  # 直接跳过，不添加任何 Marker
-        # ------------------------
-        disease_info = self.tree_config.get(d_name, {'name': 'Healthy', 'remedy': 'None'})
+            return 
 
-        # 添加标记
+        disease_info = self.tree_config.get(d_name, {'name': 'Healthy', 'remedy': 'None'})
         marker_array.markers.append(self.create_tree_marker(index, real_x, real_y, severity, stamp))
         marker_array.markers.append(self.create_text_marker(index, real_x, real_y, type_info['name'], disease_info, stamp))
 
@@ -417,9 +397,9 @@ class VisionNode(Node):
 
         return d_name, severity
     
-    def publish_trees_as_cloud(self, stamp):
+    def publish_trees_as_cloud(self):
         header = Header()
-        header.stamp = stamp  # 必须直接赋值给属性
+        header.stamp = self.get_clock().now().to_msg()
         header.frame_id = "map"
 
         fields = [
@@ -427,7 +407,6 @@ class VisionNode(Node):
             PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
             PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
         ]
-        # 获取跟踪到的所有树的坐标
         points = [[x, y, 0.0] for x, y in self.tree_tracker.values()]
         cloud_msg = pc2.create_cloud(header, fields, points)
         self.cloud_pub.publish(cloud_msg)
@@ -515,10 +494,10 @@ class VisionNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = VisionNode()
+    executor = rclpy.executors.MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
+        executor.spin()
     finally:
         node.destroy_node()
         rclpy.shutdown()

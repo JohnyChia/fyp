@@ -26,12 +26,8 @@ setup(
     entry_points={
         'console_scripts': [
             'vision_node = durian_inspection_pkg.vision_node:main',
-            # 'scanner_node = durian_inspection_pkg.scanner_node:main',
             'video_publisher = durian_inspection_pkg.video_publisher:main',
-            # 'nav_controller = durian_inspection_pkg.navigation_controller:main',
-            # 'tree_visualizer = durian_inspection_pkg.tree_visualizer:main',
             'inspection_server = durian_inspection_pkg.inspection_server:main',
-            # 'lidar_scan = durian_inspection_pkg.lidar_scan:main',
         ],
     },
 )

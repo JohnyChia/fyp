@@ -9,7 +9,7 @@
     robot:
       camera_offset_x: 0.1
     lidar:
-      use_normalization: true        # 设为 true 可自动处理各种模型的原始输出
+      use_normalization: true        
       depth_to_meter_scale: 20.0
       angle_min: -3.14159
       angle_max: 3.14159
