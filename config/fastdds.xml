@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<dds xmlns="http://www.eprosima.com/XMLSchema/dds">
+    <profiles>
+        <participant profile_name="no_shm_profile" is_default_profile="true">
+            <rtps>
+                <builtin>
+                    <avoid_builtin_multicast>true</avoid_builtin_multicast>
+                </builtin>
+                <transport>
+                    <use_builtin_transports>false</use_builtin_transports>
+                    <transport_descriptors>
+                        <transport_descriptor>
+                            <transport_id>UDPTransport</transport_id>
+                            <type>UDPv4</type>
+                        </transport_descriptor>
+                    </transport_descriptors>
+                </transport>
+            </rtps>
+        </participant>
+    </profiles>
+</dds>
