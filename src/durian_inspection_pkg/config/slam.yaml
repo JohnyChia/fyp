@@ -1,6 +1,7 @@
 slam_toolbox:
   ros__parameters:
-    mode: mapping
+    mode: localization 
+    map_file_name: /home/johny/durian_ws/src/durian_inspection_pkg/data/durian_orchard.db
     use_odom: true 
     odom_data_synced: true 
     map_frame: map

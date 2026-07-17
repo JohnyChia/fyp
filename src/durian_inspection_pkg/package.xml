@@ -9,14 +9,16 @@
 
   <buildtool_depend>ament_python</buildtool_depend>
 
-  <depend>rclpy</depend>
+  <!-- <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>visualization_msgs</depend>
+  <depend>rtabmap_msgs</depend>
 
-  <exec_depend>durian_message</exec_depend>
+  <exec_depend>durian_message</exec_depend> -->
+  <depend>durian_message</depend>
   
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

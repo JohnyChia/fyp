@@ -1,41 +1,44 @@
 #!/bin/bash
 
-echo "--- Killing ROS ---"
-pkill -9 -f ros2 || true
-pkill -9 -f gz || true
+echo "============================"
+echo "   ROS2 ROBOT STARTUP"
+echo "============================"
+
+echo "--- Killing robot nodes ---"
 pkill -9 -f vision_node || true
+pkill -9 -f depth_node || true
+pkill -9 -f bridge_node || true
+pkill -9 -f mapping_launch || true
+pkill -9 -f nav2 || true
 
 sleep 1
 
 echo "--- Cleaning DDS shared memory ---"
-rm -rf /dev/shm/fastdds* /dev/shm/fastrtps*
+rm -rf /dev/shm/fastdds* /dev/shm/fastrtps* || true
 
-cd ~/durian_ws
+echo "--- Building workspace ---"
+cd ~/durian_ws || { echo "Failed to enter workspace"; exit 1; }
 
-echo "--- Sourcing ROS ---"
-source /opt/ros/humble/setup.bash
+rm -rf build/ install/ log/
 
-echo "--- Build ---"
-colcon build --symlink-install
-
-if [ $? -ne 0 ]; then
-  echo "❌ Build failed"
-  exit 1
-fi
+echo "--- Building all packages in workspace ---"
+colcon build --symlink-install || { echo "Build failed"; exit 1; }
 
 source install/setup.bash
 
-echo "--- Check package ---"
-ros2 pkg list | grep durian_inspection_pkg
-
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI=file:///home/johny/cyclonedds.xml
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export GAZEBO_MODEL_PATH=$HOME/.gazebo/models
+unset CYCLONEDDS_URI
 export ROS_DOMAIN_ID=0
-export CUDA_VISIBLE_DEVICES=0
 
-echo "Waiting system stabilize..."
+export FASTRTPS_DEFAULT_PROFILES_FILE=""
+export RCUTILS_LOGGING_BUFFERED_STREAM=1
+
+echo "--- DDS sanity check ---"
+timeout 3 ros2 run demo_nodes_cpp talker &
 sleep 2
+pkill -f talker || true
 
-echo "--- Launch Nav2 ---"
-ros2 launch durian_inspection_pkg navigation_launch.py
+echo "--- Launch system ---"
 # ros2 launch durian_inspection_pkg mapping_launch.py
+ros2 launch durian_inspection_pkg navigation_launch.py

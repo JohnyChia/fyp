@@ -1,0 +1,121 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="default">
+
+    <physics name="default_physics" default="true" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <model name="ground">
+    <static>true</static>
+
+      <link name="ground_link">
+
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+        </collision>
+
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+
+          <material>
+            <ambient>0.4 0.8 0.4 1</ambient>
+            <diffuse>0.4 0.8 0.4 1</diffuse>
+          </material>
+
+        </visual>
+
+      </link>
+
+    </model>
+   
+    <model name="durian_tree_1">
+      <static>true</static>
+      <pose>3.2 3.1 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder><radius>0.35</radius><length>2.0</length></cylinder>
+          </geometry>
+           <pose> 0 0 1.0 0 0 0</pose>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry>
+            <mesh><uri>/home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model> 
+
+    <model name="durian_tree_2">
+      <static>true</static>
+      <pose>8 3 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder><radius>0.35</radius><length>2.0</length></cylinder>
+          </geometry>
+           <pose> 0 0 1.0 0 0 0</pose>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry>
+            <mesh><uri>/home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+
+    <model name="durian_tree_3">
+      <static>true</static>
+      <pose>8 8 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder><radius>0.35</radius><length>2.0</length></cylinder>
+          </geometry>
+          <pose> 0 0 1.0 0 0 0</pose>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry>
+            <mesh><uri>/home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+
+    <model name="durian_tree_4">
+      <static>true</static>
+       <pose>3 8 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder><radius>0.35</radius><length>2.0</length></cylinder>
+          </geometry>
+           <pose> 0 0 1.0 0 0 0</pose>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 0 1.5708 0 0</pose>
+          <geometry>
+            <mesh><uri>/home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

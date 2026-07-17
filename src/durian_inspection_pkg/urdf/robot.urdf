@@ -1,6 +1,32 @@
 <?xml version="1.0"?>
 <robot name="durian_bot" xmlns:xacro="http://ros.org/wiki/xacro">
 
+  <xacro:macro name="default_inertial" params="mass">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia ixx="0.005" ixy="0.0" ixz="0.0" iyy="0.005" iyz="0.0" izz="0.005"/>
+    </inertial>
+  </xacro:macro>
+
+  <link name="base_footprint">
+    <inertial>
+      <mass value="0.001"/>
+      <origin xyz="0 0 0"/>
+      <inertia
+        ixx="1e-6"
+        ixy="0"
+        ixz="0"
+        iyy="1e-6"
+        iyz="0"
+        izz="1e-6"/>
+    </inertial>
+  </link>
+
+  <joint name="base_joint" type="fixed">
+    <origin xyz="0 0 0.05"/>
+    <parent link="base_footprint"/><child link="base_link"/>
+  </joint>
+
   <link name="base_link">
     <visual>
       <geometry><box size="0.4 0.3 0.1"/></geometry>
@@ -9,170 +35,198 @@
     <collision>
       <geometry><box size="0.4 0.3 0.1"/></geometry>
     </collision>
-    <inertial>
-       <mass value="5.0"/>
-      <inertia ixx="0.015" ixy="0.0" ixz="0.0" iyy="0.027" iyz="0.0" izz="0.041"/>
-    </inertial>
+    <xacro:default_inertial mass="2.0"/>
   </link>
 
-  <link name="caster_wheel">
-    <visual>
-      <geometry><sphere radius="0.02"/></geometry>
-    </visual>
-    <collision>
-      <geometry><sphere radius="0.02"/></geometry>
-    </collision>
-    <inertial>
-      <mass value="0.1"/>
-      <inertia ixx="0.00001" ixy="0.0" ixz="0.0" iyy="0.00001" iyz="0.0" izz="0.00001"/>
-    </inertial>
-  </link>
+  <xacro:macro name="wheel" params="prefix x y">
+    <link name="${prefix}_wheel">
+      <visual>
+        <geometry><cylinder radius="0.05" length="0.02"/></geometry>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="0.05" length="0.02"/></geometry>
+      </collision>
+      <xacro:default_inertial mass="0.5"/>
+    </link>
+    <joint name="${prefix}_wheel_joint" type="continuous">
+      <parent link="base_link"/><child link="${prefix}_wheel"/>
+      <origin xyz="${x} ${y} -0.05" rpy="-1.5708 0 0"/><axis xyz="0 0 1"/>
+    </joint>
+  </xacro:macro>
 
-  <joint name="caster_joint" type="fixed">
-    <parent link="base_link"/>
-    <child link="caster_wheel"/>
-    <origin xyz="0.15 0.0 -0.04" rpy="0 0 0"/>
-  </joint>
-
-  <link name="left_wheel">
-    <visual><geometry><cylinder radius="0.05" length="0.02"/></geometry></visual>
-    <collision><geometry><sphere radius="0.05"/></geometry></collision>
-    <inertial>
-      <mass value="1.0"/><inertia ixx="0.0003" ixy="0.0" ixz="0.0" iyy="0.0003" iyz="0.0" izz="0.0006"/>
-    </inertial>
-  </link>
-  <joint name="left_wheel_joint" type="continuous">
-    <parent link="base_link"/><child link="left_wheel"/>
-    <origin xyz="0.0 0.18 -0.02" rpy="-1.5708 0 0"/>
-    <axis xyz="0 0 1"/> 
-  </joint>
-
-  <link name="right_wheel">
-    <visual><geometry><cylinder radius="0.05" length="0.02"/></geometry></visual>
-    <collision><geometry><sphere radius="0.05"/></geometry></collision>
-    <inertial>
-      <mass value="1.0"/><inertia ixx="0.0003" ixy="0.0" ixz="0.0" iyy="0.0003" iyz="0.0" izz="0.0006"/>
-    </inertial>
-  </link>
-  <joint name="right_wheel_joint" type="continuous">
-    <parent link="base_link"/><child link="right_wheel"/>
-    <origin xyz="0.0 -0.18 -0.02" rpy="-1.5708 0 0"/>
-    <axis xyz="0 0 1"/>
-  </joint>
+  <xacro:wheel prefix="left_front" x="0.1" y="0.18"/>
+  <xacro:wheel prefix="right_front" x="0.1" y="-0.18"/>
+  <xacro:wheel prefix="left_rear" x="-0.1" y="0.18"/>
+  <xacro:wheel prefix="right_rear" x="-0.1" y="-0.18"/>
 
   <link name="laser">
-    <visual><geometry><cylinder radius="0.05" length="0.04"/></geometry></visual>
-    <collision><geometry><cylinder radius="0.05" length="0.04"/></geometry></collision>
+    <visual>
+      <geometry><cylinder radius="0.03" length="0.04"/></geometry>
+    </visual>
+    <collision>
+      <geometry><cylinder radius="0.03" length="0.04"/></geometry>
+    </collision>
+    <xacro:default_inertial mass="0.1"/>
   </link>
+
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/><child link="laser"/>
-    <origin xyz="0.12 0.0 0.26" rpy="0 0 0"/>
+    <origin xyz="0.25 0.0 0.8" rpy="0 0 0"/>
   </joint>
 
   <link name="camera_link">
-    <visual><geometry><box size="0.05 0.05 0.05"/></geometry></visual>
+
+  <visual>
+    <geometry>
+      <box size="0.02 0.08 0.03"/>
+    </geometry>
+  </visual>
+
+  <collision>
+    <geometry>
+      <box size="0.02 0.08 0.03"/>
+    </geometry>
+  </collision>
+
+  <inertial>
+    <mass value="0.05"/>
+    <inertia
+      ixx="1e-5"
+      iyy="1e-5"
+      izz="1e-5"
+      ixy="0"
+      ixz="0"
+      iyz="0"/>
+  </inertial>
+
   </link>
+
   <joint name="camera_joint" type="fixed">
-    <parent link="base_link"/><child link="camera_link"/>
-    <origin xyz="0.18 0.0 0.2" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.2 0 0.16" rpy="0 0 0"/>
   </joint>
 
-  <gazebo>
-    <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
-        <ros>
-            <parameter name="use_sim_time" value="true"/>
-            <remapping>cmd_vel:=cmd_vel</remapping>
-            <remapping>odom:=odom</remapping>
-        </ros>
+ <link name="camera_link_optical">
+  <inertial>
+    <mass value="0.0001"/>
+    <inertia
+      ixx="1e-6"
+      iyy="1e-6"
+      izz="1e-6"
+      ixy="0"
+      ixz="0"
+      iyz="0"/>
+  </inertial>
+  </link>
 
-        <wheel_separation>0.36</wheel_separation>
-        <wheel_diameter>0.1</wheel_diameter>
-        <max_wheel_acceleration>0.5</max_wheel_acceleration>
-        <max_wheel_torque>20.0</max_wheel_torque>
-        <left_joint>left_wheel_joint</left_joint>
-        <right_joint>right_wheel_joint</right_joint>
-        <update_rate>30.0</update_rate>
-        <publish_odom>true</publish_odom>
-        <publish_odom_tf>true</publish_odom_tf>
-        <publish_wheel_tf>true</publish_wheel_tf> 
-        <odometry_frame>odom</odometry_frame>
-        <robot_base_frame>base_link</robot_base_frame>
-    </plugin>
-    
-    </gazebo>
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_link_optical"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+</joint>
 
-  <gazebo reference="laser">
-  <sensor name="lidar" type="ray">
+ <gazebo reference="laser">
+
+  <sensor name="laser_sensor" type="ray">
+
+    <pose>0 0 0 0 0 0</pose>
+    <material>Gazebo/Red</material>
     <always_on>true</always_on>
-    <visualize>true</visualize>
+
     <update_rate>10</update_rate>
+
+    <visualize>true</visualize>
+
     <ray>
       <scan>
         <horizontal>
           <samples>360</samples>
           <resolution>1</resolution>
-          <min_angle>-3.14</min_angle>
-          <max_angle>3.14</max_angle>
+          <min_angle>-3.14159</min_angle>
+          <max_angle>3.14159</max_angle>
         </horizontal>
       </scan>
+
       <range>
-        <min>0.15</min> <max>5.0</max>
+        <min>0.10</min>
+        <max>10.0</max>
         <resolution>0.01</resolution>
       </range>
+
+      <noise>
+        <type>gaussian</type>
+        <mean>0.0</mean>
+        <stddev>0.01</stddev>
+      </noise>
+
     </ray>
-    <plugin name="scan" filename="libgazebo_ros_ray_sensor.so">
+
+
+    <plugin 
+      name="gazebo_ros_laser"
+      filename="libgazebo_ros_ray_sensor.so">
+
       <ros>
-          <remapping>~/out:=scan</remapping>
-          <argument>--ros-args --param use_sim_time:=true</argument>
-        </ros>
-      <output_type>sensor_msgs/LaserScan</output_type>
+        <namespace>/</namespace>
+        <remapping>~/out:=scan_filtered</remapping>
+      </ros>
+
+
       <frame_name>laser</frame_name>
+
+      <output_type>
+        sensor_msgs/LaserScan
+      </output_type>
+
     </plugin>
+
+
+  </sensor>
+
+</gazebo>
+
+<gazebo reference="camera_link">
+  <sensor name="camera_sensor" type="depth">
+    <always_on>true</always_on>
+    <visualize>true</visualize>
+    <update_rate>20.0</update_rate>
+    <camera name="camera">
+      <horizontal_fov>1.047</horizontal_fov>
+      <image>
+        <width>640</width>
+        <height>480</height>
+        <format>R8G8B8</format>
+      </image>
+      <clip>
+        <near>0.05</near>
+        <far>15.0</far>
+      </clip>
+    </camera>
+    <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+    <ros>
+        <remapping>image_raw:=/camera/image_raw</remapping>
+        <remapping>camera_info:=/camera/camera_info</remapping>
+        <remapping>depth/image_raw:=/camera/depth/image_raw</remapping>
+        <remapping>depth/camera_info:=/camera/depth/camera_info</remapping>
+    </ros>
+    <camera_name>camera</camera_name>
+    <frame_name>camera_link_optical</frame_name>
+  </plugin>
   </sensor>
 </gazebo>
 
-  <gazebo reference="camera_link">
-    <sensor name="camera_sensor" type="camera">
-      <always_on>true</always_on><visualize>true</visualize><update_rate>15.0</update_rate>
-      <camera>
-        <horizontal_fov>1.047</horizontal_fov>
-        <image><width>640</width><height>480</height><format>R8G8B8</format></image>
-      </camera>
-      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
-        <frame_name>camera_link</frame_name>
-      </plugin>
-    </sensor>
+  <gazebo>
+    <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <left_joint>left_front_wheel_joint</left_joint>
+      <right_joint>right_front_wheel_joint</right_joint>
+      <wheel_separation>0.36</wheel_separation>
+      <wheel_diameter>0.1</wheel_diameter>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+    </plugin>
   </gazebo>
 
-  <gazebo reference="base_link">
-    <kp>1000000.0</kp>
-    <kd>10.0</kd>
-    <mu1>0.0</mu1>
-    <mu2>0.0</mu2>
-    <self_collide>false</self_collide> 
-    <minDepth>0.01</minDepth> </gazebo>
-
-  <gazebo reference="caster_wheel">
-    <mu1>0.1</mu1>
-    <mu2>0.1</mu2>
-    <kp>1000000.0</kp>
-    <kd>100.0</kd>
-    <minDepth>0.01</minDepth>
-  </gazebo>
- 
-  <gazebo reference="left_wheel">
-    <mu1>100.0</mu1>
-    <mu2>100.0</mu2>
-    <kp>1000000.0</kp>
-    <kd>10.0</kd>
-    <minDepth>0.005</minDepth>
-  </gazebo>
-
-  <gazebo reference="right_wheel">
-    <mu1>100.0</mu1>
-    <mu2>100.0</mu2>
-    <kp>1000000.0</kp>
-    <kd>10.0</kd>
-    <minDepth>0.005</minDepth>
-  </gazebo>
 </robot>

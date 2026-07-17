@@ -1,0 +1,4 @@
+string command  # "start" 或 "stop"
+---
+bool success    # 是否执行成功
+string message  # 反馈信息

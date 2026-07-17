@@ -1,13 +1,47 @@
+# ROS2 build
 build/
-devel/
 install/
 log/
+
+# ROS bag
+rosbag2_*/
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+
+# Point cloud
+*.pcd
+
+# Python cache
 __pycache__/
 *.pyc
 
-.venv/
+# Generated files
+*.gv
+*.pdf
+
+# ML models
+*.pt
+*.onnx
+
+# VS Code
 .vscode/
-build/
-devel/
-install/
-log/
+
+# Python virtual environment
+.venv/
+
+# External dependencies
+src/Depth-Anything-V2/
+src/explore_lite/
+src/explore_lite_msgs/
+src/map_merge/
+
+# Temporary
+Function
+
+# Gazebo large textures
+src/durian_inspection_pkg/config/textures/

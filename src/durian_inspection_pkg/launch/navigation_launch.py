@@ -1,97 +1,163 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import TimerAction, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import Command
 from ament_index_python.packages import get_package_share_directory
 import os
+import xacro
 
 def generate_launch_description():
     pkg_path = get_package_share_directory('durian_inspection_pkg')
-    config = os.path.join(pkg_path, 'config', 'nav2_params.yaml')
-    map_yaml = os.path.join(pkg_path, 'maps', 'my_orchard_map.yaml')
+    gazebo_ros_pkg = get_package_share_directory('gazebo_ros')
+
     urdf_file = os.path.join(pkg_path, 'urdf', 'robot.urdf')
-    
-    robot_description = Command(['xacro ', urdf_file])
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    doc = xacro.process_file(urdf_file)
+    robot_description_content = doc.toxml()
+
+    # Gazebo 启动
+    world_file = os.path.expanduser('~/durian_ws/src/durian_inspection_pkg/worlds/durian_farm.world')
+    gazebo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(gazebo_ros_pkg, 'launch', 'gazebo.launch.py')),
+        launch_arguments={'world': world_file, 'verbose': 'true'}.items()
+    )
+
+    nav2_params_file = os.path.join(pkg_path, 'config', 'nav2_params.yaml')
+
+    nav2_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'use_sim_time': 'True', 
+            'params_file': nav2_params_file, # 使用动态路径
+            'autostart': 'True',
+            'use_map_server': 'False',
+            'use_amcl': 'False'
+        }.items()
+    )
 
     return LaunchDescription([
-        DeclareLaunchArgument('use_sim_time', default_value='true'),
+        gazebo,
+    
+        # 机器人描述
+        Node(package='robot_state_publisher', executable='robot_state_publisher', 
+             parameters=[{'robot_description': robot_description_content, 'use_sim_time': True}]),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')
-            ]),
-            launch_arguments={
-                'verbose': 'true', 
-                'pause': 'false',
-                'use_sim_time': use_sim_time,
-                'world': '/home/johny/durian_ws/src/durian_inspection_pkg/worlds/my_world.world'
-            }.items()
+        Node(
+            package='joint_state_publisher',
+            executable='joint_state_publisher',
+            name='joint_state_publisher',
+            parameters=[{
+                'robot_description': robot_description_content,
+                'use_sim_time': True
+
+            }],
         ),
 
-        TimerAction(
-            period=5.0,
-            actions=[
-                Node(
-                    package='robot_state_publisher',
-                    executable='robot_state_publisher',
-                    name='robot_state_publisher',
-                    parameters=[{'robot_description': robot_description, 'use_sim_time': use_sim_time, 'publish_frequency': 30.0 }]
-                ),
-                Node(
-                    package='gazebo_ros',
-                    executable='spawn_entity.py',
-                    arguments=['-entity', 'durian_bot', '-file', urdf_file, '-z', '0.05'],
-                )
-            ]
-        ),
+        nav2_launch,
 
-        TimerAction(
-            period=10.0,
-            actions=[
-                Node(
-                    package='nav2_map_server',
-                    executable='map_server',
-                    name='map_server',
-                    output='screen',
-                    parameters=[{'use_sim_time': use_sim_time, 'yaml_filename': map_yaml}]
-                ),
-                Node(
-                    package='nav2_lifecycle_manager',
-                    executable='lifecycle_manager',
-                    name='lifecycle_manager',
-                    output='screen',
-                    parameters=[
-                        {'use_sim_time': use_sim_time, 'autostart': True, 
-                         'node_names': ['map_server', 'amcl', 'planner_server', 
-                                        'controller_server', 'behavior_server', 'bt_navigator']}
-                    ]
-                ),
-                Node(
-                    package='nav2_amcl',
-                    executable='amcl',
-                    name='amcl',
-                    parameters=[config, {'use_sim_time': use_sim_time}]
-                ),
-                Node(package='nav2_planner', executable='planner_server', name='planner_server', parameters=[config, {'use_sim_time': use_sim_time}]),
-                Node(package='nav2_controller', executable='controller_server', name='controller_server', parameters=[config, {'use_sim_time': use_sim_time}]),
-                Node(package='nav2_behaviors', executable='behavior_server', name='behavior_server', parameters=[config, {'use_sim_time': use_sim_time}]),
-                Node(package='nav2_bt_navigator', executable='bt_navigator', name='bt_navigator', parameters=[config, {'use_sim_time': use_sim_time}, 
-                    {'bt_xml_filename': '/opt/ros/humble/share/nav2_bt_navigator/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml'}])
-            ]
-        ),
+        Node(package='gazebo_ros', executable='spawn_entity.py', 
+             arguments=['-entity', 'durian_bot', '-topic', '/robot_description', '-z', '0.2']),
 
+        Node(package='tf2_ros', executable='static_transform_publisher', 
+                     arguments=['0.2', '0', '0.16', '0', '0', '0', 'base_link', 'camera_link']),
+
+
+        # --- 第二部分：Gazebo 实时相机逻辑 ---
         TimerAction(
-            period=12.0,
+            period=10.0, # 等待 Gazebo 启动
             actions=[
+                # --- 第一部分：数据库地图逻辑 ---
                 Node(
                     package='durian_inspection_pkg',
-                    executable='vision_node',
-                    name='vision_node',
-                    prefix='taskset -c 2,3',
-                    parameters=[{'use_sim_time': use_sim_time}]
+                    executable='map_publisher',
+                    name='map_publisher',
+                    output='screen' # 发布 /cloud_map
                 ),
+                
+                # 实时深度转点云
+                Node(
+                    package='depth_image_proc',
+                    executable='point_cloud_xyz_node',
+                    name='point_cloud_xyz_node',
+                    remappings=[
+                        ('image_raw', '/camera/depth/image_raw'), # 必须指明是 depth 图
+                        ('camera_info', '/camera/depth/camera_info'),
+                        ('points', '/camera/points')
+                    ],
+                    parameters=[{
+                        'use_sim_time': True,
+                        'queue_size': 100  # 稍微调大队列，防止丢包
+                    }]
+                ),
+                
+               Node(
+                    package='rtabmap_sync', executable='rgbd_sync', name='rgbd_sync',
+                    remappings=[
+                        ('rgb/image', '/camera/image_raw'),
+                        ('depth/image', '/camera/depth/image_raw'),
+                        ('rgb/camera_info', '/camera/camera_info'),
+                        ('rgbd_image', '/rtabmap/rgbd_image')
+                    ],
+                    parameters=[{
+                        'approx_sync': True,
+                        'queue_size': 20, 
+                        'slop': 0.1  # 允许 100ms 的时间误差
+                    }]
+                ),
+                
+                # 修改 RTAB-Map 启动部分
+                Node(
+                    package='rtabmap_slam', executable='rtabmap', name='rtabmap',
+                    parameters=[{
+                        'use_sim_time': True, 
+                        'subscribe_rgbd': True, 
+                        'subscribe_scan': True,
+                        'subscribe_depth': False, # 改为 False，因为你用了 rgbd_sync
+                        'subscribe_rgb': False,   # 改为 False
+                        'publish_tf': True,
+                        'odom_frame_id': 'odom',
+                        'map_frame_id': 'map',
+                        'frame_id': 'base_footprint',
+                    }],
+                    remappings=[
+                        ('scan', '/scan_filtered'),
+                        ('rgbd_image', '/rtabmap/rgbd_image'),
+                    ]
+                ),
+
+                # Node(
+                #     package='durian_inspection_pkg',
+                #     executable='vision_node',
+                #     name='vision_node',
+                #     output='screen'
+                # ),
+
+                Node(
+                    package='durian_inspection_pkg',
+                    executable='navigator',
+                    name='navigator',
+                    output='screen'
+                ),
+
+                Node(
+                    package='durian_inspection_pkg',
+                    executable='inspection_server',
+                    name='inspection_server',
+                    output='screen'
+                ),
+
+                Node(
+                    package='durian_inspection_pkg',
+                    executable='gui',
+                    name='gui',
+                    output='screen'
+                ),
+
             ]
         ),
+
+        # RViz2
+        Node(package='rviz2', executable='rviz2', name='rviz2', parameters=[{'use_sim_time': True}])
     ])
