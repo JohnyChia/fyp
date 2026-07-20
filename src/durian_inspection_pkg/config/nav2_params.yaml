@@ -1,57 +1,52 @@
 controller_server:
   ros__parameters:
     use_sim_time: True
-    transform_tolerance: 0.5
     controller_frequency: 20.0
-    min_x_velocity_threshold: 0.001
-    min_y_velocity_threshold: 0.0
-    min_theta_velocity_threshold: 0.001
+    transform_tolerance: 0.5
     controller_plugins: ["FollowPath"]
     goal_checker_plugins: ["goal_checker"]
+
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.3
-      yaw_goal_tolerance: 1.5
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.6
       stateful: True
-    current_goal_checker: "goal_checker"
+
     progress_checker_plugin: "progress_checker"
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.05
-      movement_time_allowance: 20.0
+      required_movement_radius: 0.1
+      movement_time_allowance: 30.0
+
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      controller_frequency: 20.0
       desired_linear_vel: 0.30
       lookahead_dist: 0.6
-      lookahead_time: 2.0
-      # 删除下面所有 critics 和 weight 相关行
-      max_linear_accel: 0.3
-      max_linear_decel: 0.15
       min_lookahead_dist: 0.3
-      max_angular_vel: 0.8
-      regulated_linear_velocity_scaling: True
-      use_collision_detection: False
+      max_linear_accel: 0.8
+      max_linear_decel: 0.8
+      max_angular_vel: 1.5
+      use_collision_detection: True
+
 planner_server:
   ros__parameters:
     use_sim_time: True
-    transform_tolerance: 0.5
     planner_plugins: ["GridBased"]
     GridBased:
-     plugin: "nav2_smac_planner/SmacPlanner2D"
-     tolerance: 0.25
-     allow_unknown: true
-     max_iterations: 100000
+      plugin: "nav2_smac_planner/SmacPlanner2D"
+      tolerance: 0.2
+      allow_unknown: False
+      max_iterations: 200000
+      downsample_costmap: False
+
 bt_navigator:
   ros__parameters:
     use_sim_time: True
-    bt_xml_filename: "/opt/ros/humble/share/nav2_bt_navigator/behavior_trees/navigate_w_replanning_only_if_path_becomes_invalid.xml"
-    action_server_timeout: 30.0
-    service_timeout: 30.0
-    bt_loop_duration: 500
+    bt_xml_filename: "/opt/ros/humble/share/nav2_bt_navigator/behavior_trees/navigate_w_replanning_and_recovery.xml"
     default_server_timeout: 20
-    replan_attempts_max: 5
-    enable_groot_monitoring: False
+    bt_loop_duration: 100
+    replan_attempts_max: 10
+
 behavior_server:
   ros__parameters:
     use_sim_time: True
@@ -62,101 +57,70 @@ behavior_server:
       plugin: "nav2_behaviors/BackUp"
     wait:
       plugin: "nav2_behaviors/Wait"
+
 global_costmap:
   ros__parameters:
     use_sim_time: True
-    global_frame: odom
+    update_frequency: 2.0
+    publish_frequency: 1.0
+    transform_tolerance: 1.0
+    global_frame: map
     robot_base_frame: base_footprint
     rolling_window: False
-    footprint_padding: 0.05
-    track_unknown_space: True
-    transform_tolerance: 1.0
-    width: 50.0
-    height: 50.0
-    origin_x: -25.0
-    origin_y: -25.0
+    track_unknown_space: False
+    width: 100.0
+    height: 100.0
     resolution: 0.05
-    robot_radius: 0.30
-    plugins: [ "obstacle_layer", "inflation_layer"]
+    robot_radius: 0.35
+    plugins: ["obstacle_layer", "inflation_layer"]
+
     obstacle_layer:
       plugin: "nav2_costmap_2d::ObstacleLayer"
       enabled: True
-      observation_sources: point_cloud_source
-      point_cloud_source:
-        topic: /cloud_map # 匹配你的话题名
+      observation_sources: camera_cloud_source
+      camera_cloud_source:
+        topic: /camera/points
         data_type: PointCloud2
+        sensor_frame: camera_link
         marking: True
-        clearing: False
-        min_obstacle_height: -0.1
-        max_obstacle_height: 2.0
-        sensor_frame: base_footprint
-        raytrace_range: 2.5
+        clearing: True    
+        obstacle_max_range: 5.0
+
     inflation_layer:
       plugin: "nav2_costmap_2d::InflationLayer"
-      inflation_radius: 0.35
-      cost_scaling_factor: 3.0
+      inflation_radius: 0.8
+      cost_scaling_factor: 5.0
+
 local_costmap:
   ros__parameters:
     use_sim_time: True
+    update_frequency: 10.0
+    publish_frequency: 5.0
+    transform_tolerance: 1.0
     global_frame: odom
     robot_base_frame: base_footprint
     rolling_window: True
-    width: 10.0
-    height: 10.0
+    width: 8.0
+    height: 8.0
     resolution: 0.05
-    robot_radius: 0.25
-    plugins: ["obstacle_layer", "voxel_layer","inflation_layer"]
+    robot_radius: 0.35
+    plugins: ["obstacle_layer", "inflation_layer"]
+
     obstacle_layer:
       plugin: "nav2_costmap_2d::ObstacleLayer"
-      observation_sources: scan
-      scan:
-        topic: /scan_filtered
-        data_type: LaserScan
-        marking: True
-        clearing: True
-    voxel_layer:
-      plugin: "nav2_costmap_2d::VoxelLayer"
-      observation_sources: camera_points
-      camera_points:
-        topic: /camera/points 
+      enabled: True
+      observation_sources: camera_cloud_source
+      camera_cloud_source:
+        topic: /camera/points
         data_type: PointCloud2
         marking: True
         clearing: True
+        min_obstacle_height: 0.05
+        max_obstacle_height: 3.0
+        obstacle_max_range: 5.0
+        raytrace_range: 6.0
+
     inflation_layer:
       plugin: "nav2_costmap_2d::InflationLayer"
-      inflation_radius: 0.35
+      inflation_radius: 0.70
       cost_scaling_factor: 3.0
-# amcl:
-#   ros__parameters:
-#     use_sim_time: True
-#     base_frame_id: "base_link"
-#     odom_frame_id: "odom"
-#     global_frame_id: "map"
-#     laser_frame_id: "laser"
-#     scan_topic: "/scan_filtered"
-#     map_topic: "/map"
-#     tf_broadcast: True
-#     transform_tolerance: 0.5
-#     gui_publish_rate: 10.0
-#     robot_model_type: "nav2_amcl::DifferentialMotionModel"
-#     set_initial_pose: True
-#     initial_pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0}
-#     odom_model_type: "diff"
-#     resample_interval: 1
-#     min_particles: 500
-#     max_particles: 2000
-#     update_min_d: 0.1
-#     update_min_a: 0.1
-#     odom_alpha1: 0.5
-#     odom_alpha2: 0.5
-#     odom_alpha3: 0.2
-#     odom_alpha4: 0.2
-#     initial_cov_xx: 0.5
-#     initial_cov_yy: 0.5
-#     initial_cov_aa: 0.5
-#     laser_min_range: 0.25
-#     laser_max_range: 5.0
-#     laser_max_beams: 180
-#     laser_likelihood_max_dist: 4.0
-#     recovery_alpha_fast: 0.0
-#     recovery_alpha_slow: 0.0

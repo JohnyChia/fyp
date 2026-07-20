@@ -13,18 +13,16 @@
       <mass value="0.001"/>
       <origin xyz="0 0 0"/>
       <inertia
-        ixx="1e-6"
-        ixy="0"
-        ixz="0"
-        iyy="1e-6"
-        iyz="0"
+        ixx="1e-6" ixy="0" ixz="0"
+        iyy="1e-6" iyz="0"
         izz="1e-6"/>
     </inertial>
   </link>
 
   <joint name="base_joint" type="fixed">
     <origin xyz="0 0 0.05"/>
-    <parent link="base_footprint"/><child link="base_link"/>
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
   </joint>
 
   <link name="base_link">
@@ -38,6 +36,7 @@
     <xacro:default_inertial mass="2.0"/>
   </link>
 
+  <!-- 轮子 Macro：加入了 Gazebo 摩擦力参数，防止侧滑 -->
   <xacro:macro name="wheel" params="prefix x y">
     <link name="${prefix}_wheel">
       <visual>
@@ -48,10 +47,23 @@
       </collision>
       <xacro:default_inertial mass="0.5"/>
     </link>
+    
     <joint name="${prefix}_wheel_joint" type="continuous">
-      <parent link="base_link"/><child link="${prefix}_wheel"/>
-      <origin xyz="${x} ${y} -0.05" rpy="-1.5708 0 0"/><axis xyz="0 0 1"/>
+      <parent link="base_link"/>
+      <child link="${prefix}_wheel"/>
+      <origin xyz="${x} ${y} -0.05" rpy="-1.5708 0 0"/>
+      <axis xyz="0 0 1"/>
     </joint>
+
+    <gazebo reference="${prefix}_wheel">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+      <kp>500000.0</kp>
+      <kd>10.0</kd>
+      <minDepth>0.001</minDepth>
+      <maxVel>0.1</maxVel>
+      <fdir1>1 0 0</fdir1>
+    </gazebo>
   </xacro:macro>
 
   <xacro:wheel prefix="left_front" x="0.1" y="0.18"/>
@@ -70,35 +82,22 @@
   </link>
 
   <joint name="laser_joint" type="fixed">
-    <parent link="base_link"/><child link="laser"/>
+    <parent link="base_link"/>
+    <child link="laser"/>
     <origin xyz="0.25 0.0 0.8" rpy="0 0 0"/>
   </joint>
 
   <link name="camera_link">
-
-  <visual>
-    <geometry>
-      <box size="0.02 0.08 0.03"/>
-    </geometry>
-  </visual>
-
-  <collision>
-    <geometry>
-      <box size="0.02 0.08 0.03"/>
-    </geometry>
-  </collision>
-
-  <inertial>
-    <mass value="0.05"/>
-    <inertia
-      ixx="1e-5"
-      iyy="1e-5"
-      izz="1e-5"
-      ixy="0"
-      ixz="0"
-      iyz="0"/>
-  </inertial>
-
+    <visual>
+      <geometry><box size="0.02 0.08 0.03"/></geometry>
+    </visual>
+    <collision>
+      <geometry><box size="0.02 0.08 0.03"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="0.05"/>
+      <inertia ixx="1e-5" iyy="1e-5" izz="1e-5" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
   </link>
 
   <joint name="camera_joint" type="fixed">
@@ -107,125 +106,120 @@
     <origin xyz="0.2 0 0.16" rpy="0 0 0"/>
   </joint>
 
- <link name="camera_link_optical">
-  <inertial>
-    <mass value="0.0001"/>
-    <inertia
-      ixx="1e-6"
-      iyy="1e-6"
-      izz="1e-6"
-      ixy="0"
-      ixz="0"
-      iyz="0"/>
-  </inertial>
+  <link name="camera_link_optical">
+    <inertial>
+      <mass value="0.0001"/>
+      <inertia ixx="1e-6" iyy="1e-6" izz="1e-6" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
   </link>
 
   <joint name="camera_optical_joint" type="fixed">
     <parent link="camera_link"/>
     <child link="camera_link_optical"/>
     <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
-</joint>
+  </joint>
 
- <gazebo reference="laser">
+  <!-- 激光雷达传感器 -->
+  <gazebo reference="laser">
+    <sensor name="laser_sensor" type="ray">
+      <pose>0 0 0 0 0 0</pose>
+      <material>Gazebo/Red</material>
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <visualize>true</visualize>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.10</min>
+          <max>10.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="gazebo_ros_laser" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <remapping>~/out:=scan_filtered</remapping>
+        </ros>
+        <frame_name>laser</frame_name>
+        <output_type>sensor_msgs/LaserScan</output_type>
+      </plugin>
+    </sensor>
+  </gazebo>
 
-  <sensor name="laser_sensor" type="ray">
+  <!-- 深度相机传感器 -->
+  <gazebo reference="camera_link">
+    <sensor name="camera_sensor" type="depth">
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <update_rate>20.0</update_rate>
+      <camera name="camera">
+        <horizontal_fov>1.047</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>15.0</far>
+        </clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <ros>
+          <remapping>image_raw:=/camera/image_raw</remapping>
+          <remapping>camera_info:=/camera/camera_info</remapping>
+          <remapping>depth/image_raw:=/camera/depth/image_raw</remapping>
+          <remapping>depth/camera_info:=/camera/depth/camera_info</remapping>
+        </ros>
+        <camera_name>camera</camera_name>
+        <frame_name>camera_link_optical</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
 
-    <pose>0 0 0 0 0 0</pose>
-    <material>Gazebo/Red</material>
-    <always_on>true</always_on>
-
-    <update_rate>10</update_rate>
-
-    <visualize>true</visualize>
-
-    <ray>
-      <scan>
-        <horizontal>
-          <samples>360</samples>
-          <resolution>1</resolution>
-          <min_angle>-3.14159</min_angle>
-          <max_angle>3.14159</max_angle>
-        </horizontal>
-      </scan>
-
-      <range>
-        <min>0.10</min>
-        <max>10.0</max>
-        <resolution>0.01</resolution>
-      </range>
-
-      <noise>
-        <type>gaussian</type>
-        <mean>0.0</mean>
-        <stddev>0.01</stddev>
-      </noise>
-
-    </ray>
-
-
-    <plugin 
-      name="gazebo_ros_laser"
-      filename="libgazebo_ros_ray_sensor.so">
-
-      <ros>
-        <namespace>/</namespace>
-        <remapping>~/out:=scan_filtered</remapping>
-      </ros>
-
-
-      <frame_name>laser</frame_name>
-
-      <output_type>
-        sensor_msgs/LaserScan
-      </output_type>
-
-    </plugin>
-
-
-  </sensor>
-
-</gazebo>
-
-<gazebo reference="camera_link">
-  <sensor name="camera_sensor" type="depth">
-    <always_on>true</always_on>
-    <visualize>true</visualize>
-    <update_rate>20.0</update_rate>
-    <camera name="camera">
-      <horizontal_fov>1.047</horizontal_fov>
-      <image>
-        <width>640</width>
-        <height>480</height>
-        <format>R8G8B8</format>
-      </image>
-      <clip>
-        <near>0.05</near>
-        <far>15.0</far>
-      </clip>
-    </camera>
-    <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
-    <ros>
-        <remapping>image_raw:=/camera/image_raw</remapping>
-        <remapping>camera_info:=/camera/camera_info</remapping>
-        <remapping>depth/image_raw:=/camera/depth/image_raw</remapping>
-        <remapping>depth/camera_info:=/camera/depth/camera_info</remapping>
-    </ros>
-    <camera_name>camera</camera_name>
-    <frame_name>camera_link_optical</frame_name>
-  </plugin>
-  </sensor>
-</gazebo>
-
+  <!-- ✨ 核心修改：升级为四轮驱动的差速/滑移控制器 -->
   <gazebo>
-    <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+    <plugin name="skid_steer_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <!-- 轮子数量 -->
+      <num_wheel_pairs>2</num_wheel_pairs>
+      
+      <!-- 前轮对 -->
       <left_joint>left_front_wheel_joint</left_joint>
       <right_joint>right_front_wheel_joint</right_joint>
+      
+      <!-- 后轮对 -->
+      <left_joint>left_rear_wheel_joint</left_joint>
+      <right_joint>right_rear_wheel_joint</right_joint>
+
+      <!-- 运动学参数 -->
       <wheel_separation>0.36</wheel_separation>
       <wheel_diameter>0.1</wheel_diameter>
+
+      <!-- 限制限制 -->
+      <max_wheel_torque>20</max_wheel_torque>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+      <!-- 里程计配置 -->
       <publish_odom>true</publish_odom>
       <publish_odom_tf>true</publish_odom_tf>
       <odometry_frame>odom</odometry_frame>
       <robot_base_frame>base_footprint</robot_base_frame>
+      
+      <!-- 协方差矩阵设置（防止 Nav2 因为里程计噪声过大而报错） -->
+      <covariance_x>0.0001</covariance_x>
+      <covariance_y>0.0001</covariance_y>
+      <covariance_yaw>0.01</covariance_yaw>
     </plugin>
   </gazebo>
 

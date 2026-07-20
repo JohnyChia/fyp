@@ -9,7 +9,6 @@ setup(
     version='0.0.0',
     py_modules=[
         'inspection_server',
-        'navigator',
         'gui',
         'map_publisher',
         'vision_node',
@@ -39,7 +38,6 @@ setup(
             'depth_node = depth:main',
             'bridge_node = bridge_node:main',
             'map_publisher = map_publisher:main',
-            'navigator = navigator:main',
             'gui = gui:main'
         ],
     },

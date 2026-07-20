@@ -19,6 +19,9 @@
 
   <exec_depend>durian_message</exec_depend> -->
   <depend>durian_message</depend>
+
+  <exec_depend>python3-sklearn</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
   
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
