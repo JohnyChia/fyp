@@ -29,6 +29,7 @@ processed_images/
 # ML models
 *.pt
 *.onnx
+!models/durian_leaf/*.pt
 
 # VS Code
 .vscode/
