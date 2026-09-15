@@ -12,13 +12,16 @@ setup(
         'gui',
         'map_publisher',
         'vision_node',
-        'depth',
-        'bridge_node'
+        'processing_node',
+        'observation_store',
+        'bridge_node',
+        'collector'
     ],
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/durian_inspection_pkg']),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*_launch.py')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
         (os.path.join('share', package_name, 'maps'), glob('maps/*.yaml')),
@@ -33,12 +36,13 @@ setup(
     entry_points={
         'console_scripts': [
             'vision_node = vision_node:main',
-            # 'video_publisher = durian_inspection_pkg.video_publisher:main',
+            'processing_node = processing_node:main',
+
             'inspection_server = inspection_server:main',
-            'depth_node = depth:main',
             'bridge_node = bridge_node:main',
             'map_publisher = map_publisher:main',
-            'gui = gui:main'
+            'gui = gui:main',
+            'collector = collector:main'
         ],
     },
 )

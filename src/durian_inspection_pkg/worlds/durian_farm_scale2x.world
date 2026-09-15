@@ -1,0 +1,3199 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version="1.7">
+<world name="default">
+  <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
+  </plugin>
+  <scene>
+    <ambient>0.8 0.8 0.8 1.0</ambient>
+    <background>0.5 0.7 0.9 1.0</background>
+    <shadows>true</shadows>
+  </scene>
+  <light name="sun" type="directional">
+    <cast_shadows>true</cast_shadows>
+    <pose>0 0 10 0 0 0</pose>
+    <diffuse>1.0 1.0 1.0 1</diffuse>
+    <specular>0.2 0.2 0.2 1</specular>
+    <attenuation>
+      <range>1000</range>
+      <constant>0.9</constant>
+      <linear>0.01</linear>
+      <quadratic>0.001</quadratic>
+    </attenuation>
+    <direction>-0.5 0.1 -0.9</direction>
+  </light>
+  <physics name="default_physics" default="true" type="ode">
+    <max_step_size>0.001</max_step_size>
+    <real_time_update_rate>1000</real_time_update_rate>
+  </physics>
+  <model name="ground">
+    <static>true</static>
+    <link name="ground_link">
+      <collision name="collision">
+        <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+      </collision>
+      <visual name="visual">
+        <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
+        <material><ambient>0.4 0.8 0.4 1</ambient><diffuse>0.4 0.8 0.4 1</diffuse></material>
+      </visual>
+    </link>
+  </model>
+
+  
+  <model name="durian_tree_1">
+    <static>true</static>
+    <pose>3.2 3.1 0 0 0 0</pose>
+    <link name="link">
+      <collision name="collision">
+        <geometry><cylinder><radius>0.35</radius><length>2.0</length></cylinder></geometry>
+        <pose>0 0 1.0 0 0 0</pose>
+      </collision>
+      <visual name="tree_mesh">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry><mesh><uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh></geometry>
+      </visual>
+
+    
+    <visual name="healthy_leaf_1">
+      <pose>0.022 -0.429 1.330 -0.030 0.070 4.780</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="healthy_leaf_2">
+      <pose>-0.121 0.429 1.110 -0.080 -0.020 1.840</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="healthy_leaf_3">
+      <pose>-0.165 -0.407 1.350 -0.010 0.080 4.320</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="healthy_leaf_4">
+      <pose>-0.319 0.231 1.260 0.070 -0.100 2.520</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="healthy_leaf_5">
+      <pose>0.253 0.407 0.960 -0.010 -0.070 1.010</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="healthy_leaf_6">
+      <pose>-0.033 -0.396 1.430 -0.090 0.050 4.630</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="healthy_leaf_9">
+      <pose>-0.088 -0.396 1.390 0.050 -0.080 4.710</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_10">
+      <pose>-0.055 -0.495 1.400 0.090 0.040 4.660</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_11">
+      <pose>-0.088 -0.418 1.420 0.020 -0.040 4.380</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_12">
+      <pose>-0.099 -0.385 1.530 0.040 0.020 4.800</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_13">
+      <pose>-0.297 0.297 1.330 -0.100 -0.130 2.490</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_14">
+      <pose>-0.275 -0.341 1.430 -0.190 0.260 4.420</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_15">
+      <pose>-0.132 0.352 1.180 -0.150 0.100 1.880</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_16">
+      <pose>0.022 -0.506 1.370 -0.070 0.030 4.960</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_17">
+      <pose>-0.121 0.363 1.080 -0.180 -0.190 1.900</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_18">
+      <pose>-0.044 -0.473 1.350 0.020 -0.030 4.980</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_19">
+      <pose>-0.220 0.451 1.170 -0.200 0.120 1.830</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_20">
+      <pose>-0.352 0.154 1.260 0.130 -0.020 2.690</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_21">
+      <pose>-0.341 0.319 1.340 0.120 -0.180 2.720</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_22">
+      <pose>-0.209 -0.374 1.270 0.170 0.120 4.130</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_23">
+      <pose>-0.121 -0.308 1.260 -0.180 0.220 4.460</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_24">
+      <pose>-0.066 -0.319 1.440 0.130 0.230 4.330</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_25">
+      <pose>-0.055 0.374 1.030 -0.110 -0.150 1.770</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_26">
+      <pose>0.330 0.484 0.910 0.090 -0.100 1.180</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_27">
+      <pose>-0.165 0.363 1.010 -0.060 0.060 1.860</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_28">
+      <pose>-0.044 -0.495 1.240 0.090 0.070 4.890</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_29">
+      <pose>0.044 -0.308 1.430 0.030 -0.140 4.810</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_30">
+      <pose>-0.099 -0.396 1.400 -0.120 0.010 4.490</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_31">
+      <pose>0.297 0.319 1.050 0.150 -0.260 0.820</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_32">
+      <pose>-0.220 -0.517 1.400 0.160 -0.120 4.270</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_33">
+      <pose>-0.044 -0.473 1.360 -0.060 0.080 4.670</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_34">
+      <pose>0.198 0.330 0.950 0.040 -0.250 0.910</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_35">
+      <pose>0.198 0.308 0.920 -0.180 0.010 0.940</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_36">
+      <pose>0.165 0.473 0.900 0.120 -0.180 1.110</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_37">
+      <pose>0.154 0.297 0.940 0.060 0.100 1.180</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="healthy_leaf_38">
+      <pose>0.011 -0.341 1.430 -0.180 -0.110 4.680</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    </link>
+    </model>
+
+  
+  <model name="durian_tree_2">
+    <static>true</static>
+    <pose>8 3 0 0 0 0</pose>
+    <link name="link">
+      <collision name="collision">
+        <geometry><cylinder><radius>0.35</radius><length>2.0</length></cylinder></geometry>
+        <pose>0 0 1.0 0 0 0</pose>
+      </collision>
+      <visual name="tree_mesh">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry><mesh><uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh></geometry>
+      </visual>
+
+    
+    <visual name="blight_leaf_1">
+      <pose>-0.462 -0.011 1.030 -0.080 0.030 3.160</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_2">
+      <pose>-0.429 -0.143 1.080 0.060 -0.030 3.470</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_3">
+      <pose>-0.220 0.352 1.040 0.050 -0.030 2.130</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_4">
+      <pose>-0.495 0.000 1.480 0.060 -0.030 3.140</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_5">
+      <pose>-0.473 0.132 0.970 -0.000 0.080 2.870</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_6">
+      <pose>0.440 -0.110 1.350 0.020 0.010 6.040</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_7">
+      <pose>0.352 -0.319 1.450 -0.090 -0.040 5.560</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_8">
+      <pose>0.000 -0.462 1.300 -0.090 0.070 4.710</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="blight_leaf_9">
+      <pose>-0.561 -0.088 1.060 0.090 0.210 3.290</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_10">
+      <pose>-0.330 0.374 0.950 0.140 0.160 2.070</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_11">
+      <pose>-0.132 0.319 1.110 -0.030 -0.090 2.140</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_12">
+      <pose>-0.517 -0.242 1.120 0.120 0.050 3.410</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_13">
+      <pose>-0.517 -0.242 1.160 0.070 -0.070 3.510</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_14">
+      <pose>-0.099 -0.561 1.250 -0.130 0.130 4.660</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_15">
+      <pose>-0.198 0.308 0.970 0.190 -0.080 2.080</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_16">
+      <pose>0.374 -0.330 1.370 -0.090 -0.110 5.510</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_17">
+      <pose>0.528 -0.165 1.400 0.050 0.200 6.010</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_18">
+      <pose>0.352 -0.275 1.540 -0.200 0.160 5.740</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_19">
+      <pose>-0.572 -0.066 1.480 0.050 -0.060 3.050</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_20">
+      <pose>-0.187 0.275 1.060 -0.000 0.080 2.010</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_21">
+      <pose>0.330 -0.297 1.360 -0.070 0.050 5.740</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_22">
+      <pose>-0.165 0.275 1.130 0.040 0.100 2.110</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_23">
+      <pose>-0.275 0.407 0.980 0.010 0.040 1.930</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_24">
+      <pose>-0.583 0.099 0.930 0.160 -0.120 2.690</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_25">
+      <pose>-0.418 -0.077 1.130 0.150 0.040 3.460</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_26">
+      <pose>-0.132 0.440 0.980 -0.110 0.040 2.210</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_27">
+      <pose>-0.209 0.462 1.040 0.200 0.020 2.120</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_28">
+      <pose>0.385 -0.187 1.330 0.030 -0.180 6.170</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_29">
+      <pose>0.363 -0.220 1.430 -0.170 0.150 5.670</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_30">
+      <pose>-0.044 -0.495 1.400 0.020 0.260 4.550</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_31">
+      <pose>-0.473 0.242 0.960 -0.120 0.130 2.810</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_32">
+      <pose>-0.110 -0.451 1.390 0.030 0.160 4.510</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_33">
+      <pose>-0.066 -0.539 1.260 -0.160 0.250 4.770</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_34">
+      <pose>-0.363 0.154 1.030 -0.040 0.220 3.030</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_35">
+      <pose>-0.451 -0.231 1.020 -0.130 0.070 3.330</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_36">
+      <pose>-0.462 0.033 1.070 0.050 -0.150 3.340</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_37">
+      <pose>0.352 -0.385 1.460 0.050 -0.070 5.670</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="blight_leaf_38">
+      <pose>-0.495 -0.022 1.420 0.110 0.120 3.250</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    </link>
+  
+      
+      
+      
+      
+      
+      
+      
+      
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  
+    </model>
+
+  
+  <model name="durian_tree_3">
+    <static>true</static>
+    <pose>8 8 0 0 0 0</pose>
+    <link name="link">
+      <collision name="collision">
+        <geometry><cylinder><radius>0.35</radius><length>2.0</length></cylinder></geometry>
+        <pose>0 0 1.0 0 0 0</pose>
+      </collision>
+      <visual name="tree_mesh">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry><mesh><uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh></geometry>
+      </visual>
+
+    
+    <visual name="algal_leaf_1">
+      <pose>-0.187 0.385 1.430 0.070 -0.050 2.020</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_2">
+      <pose>-0.132 -0.440 1.010 0.090 0.070 4.410</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_3">
+      <pose>-0.319 -0.275 1.150 0.090 -0.090 3.840</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_4">
+      <pose>-0.363 -0.165 1.230 -0.010 0.040 3.570</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_5">
+      <pose>-0.330 -0.374 0.930 0.070 -0.000 3.990</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_6">
+      <pose>0.066 0.418 1.330 -0.070 0.010 1.410</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_7">
+      <pose>0.341 0.242 1.360 -0.040 0.080 0.600</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_8">
+      <pose>0.330 0.330 1.330 0.030 0.050 0.780</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="algal_leaf_9">
+      <pose>-0.308 -0.341 1.150 0.200 -0.250 3.840</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_10">
+      <pose>0.011 0.418 1.340 -0.060 -0.180 1.310</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_11">
+      <pose>0.429 0.198 1.400 0.050 0.230 0.690</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_12">
+      <pose>0.242 0.242 1.270 0.160 -0.040 0.580</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_13">
+      <pose>0.264 0.319 1.290 0.220 0.020 0.710</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_14">
+      <pose>-0.242 -0.352 1.080 0.270 -0.010 4.260</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_15">
+      <pose>-0.352 -0.121 1.270 0.140 -0.040 3.760</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_16">
+      <pose>-0.187 -0.429 0.920 -0.090 0.190 4.560</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_17">
+      <pose>-0.330 -0.176 1.220 0.050 0.120 3.700</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_18">
+      <pose>-0.418 -0.121 1.230 0.120 -0.080 3.680</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_19">
+      <pose>-0.341 -0.209 1.240 0.020 -0.100 3.380</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_20">
+      <pose>-0.429 -0.385 0.900 0.210 0.130 4.020</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_21">
+      <pose>0.308 0.209 1.450 -0.000 0.120 0.460</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_22">
+      <pose>-0.242 -0.550 1.060 -0.010 0.230 4.590</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_23">
+      <pose>-0.088 0.451 1.330 -0.090 -0.030 2.210</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_24">
+      <pose>-0.220 -0.451 0.910 0.010 0.180 3.940</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_25">
+      <pose>-0.275 -0.088 1.330 -0.150 0.050 3.510</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_26">
+      <pose>0.407 0.374 1.400 0.100 0.120 0.660</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_27">
+      <pose>-0.330 -0.297 1.160 0.040 -0.060 3.930</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_28">
+      <pose>0.319 0.253 1.260 0.130 -0.150 0.940</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_29">
+      <pose>-0.385 -0.352 0.940 -0.120 -0.090 3.930</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_30">
+      <pose>-0.253 -0.187 1.190 -0.020 -0.150 3.670</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_31">
+      <pose>-0.033 0.506 1.370 0.020 0.050 1.520</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_32">
+      <pose>0.429 0.341 1.350 -0.120 0.270 0.640</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_33">
+      <pose>0.308 0.165 1.440 0.160 0.230 0.540</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_34">
+      <pose>-0.231 -0.462 0.920 -0.080 -0.140 4.150</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_35">
+      <pose>0.363 0.319 1.460 0.000 0.020 0.430</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_36">
+      <pose>0.143 0.528 1.320 -0.130 0.200 1.250</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_37">
+      <pose>-0.209 -0.451 0.920 0.090 0.040 4.580</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="algal_leaf_38">
+      <pose>-0.374 -0.198 1.230 0.010 -0.000 3.780</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    </link>
+  
+      
+      
+      
+      
+      
+      
+      
+      
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  
+    </model>
+
+  
+  <model name="durian_tree_4">
+    <static>true</static>
+    <pose>3 8 0 0 0 0</pose>
+    <link name="link">
+      <collision name="collision">
+        <geometry><cylinder><radius>0.35</radius><length>2.0</length></cylinder></geometry>
+        <pose>0 0 1.0 0 0 0</pose>
+      </collision>
+      <visual name="tree_mesh">
+        <pose>0 0 0 1.5708 0 0</pose>
+        <geometry><mesh><uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/tree_small_03_4k.obj</uri></mesh></geometry>
+      </visual>
+
+    
+    <visual name="colletotrichum_leaf_1">
+      <pose>0.088 -0.473 0.900 -0.100 0.050 4.900</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_2">
+      <pose>-0.473 -0.110 1.000 -0.010 0.100 3.380</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_3">
+      <pose>-0.022 0.484 1.330 0.070 0.040 1.620</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_4">
+      <pose>0.473 -0.132 1.260 0.010 0.030 6.020</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_5">
+      <pose>-0.352 0.209 0.980 -0.000 0.080 2.600</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_6">
+      <pose>-0.231 0.330 0.940 0.080 -0.020 2.180</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_7">
+      <pose>-0.484 0.022 1.260 0.040 0.030 3.100</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_8">
+      <pose>-0.264 0.308 1.450 -0.020 0.050 2.290</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    
+    <visual name="colletotrichum_leaf_9">
+      <pose>0.077 0.506 1.240 -0.000 0.130 1.510</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_10">
+      <pose>-0.275 0.143 1.050 0.100 -0.080 2.450</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_11">
+      <pose>-0.495 -0.000 0.900 0.060 0.280 3.570</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_12">
+      <pose>-0.451 0.297 0.940 -0.130 0.110 2.700</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_13">
+      <pose>-0.352 0.330 1.430 -0.050 0.010 2.470</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_14">
+      <pose>-0.363 0.385 1.350 0.070 0.000 2.420</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_15">
+      <pose>-0.407 0.033 1.200 -0.030 0.230 3.070</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_16">
+      <pose>0.462 -0.066 1.230 0.170 0.100 5.970</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_17">
+      <pose>-0.220 0.352 1.520 0.120 0.180 2.120</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_18">
+      <pose>-0.132 0.396 0.950 0.260 -0.060 2.180</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_19">
+      <pose>-0.473 -0.165 0.940 0.060 -0.090 3.580</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_20">
+      <pose>0.099 -0.385 0.830 -0.070 0.090 5.010</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_21">
+      <pose>-0.264 0.121 1.070 -0.010 -0.090 2.680</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_22">
+      <pose>-0.440 0.154 0.910 0.180 0.130 2.470</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_23">
+      <pose>-0.330 0.220 1.020 -0.080 -0.010 2.790</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_24">
+      <pose>-0.451 0.110 0.900 -0.120 -0.070 2.590</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_25">
+      <pose>0.440 -0.121 1.230 0.080 -0.150 5.970</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_26">
+      <pose>-0.099 0.473 1.340 0.010 -0.050 1.780</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_27">
+      <pose>0.495 -0.066 1.270 0.040 0.210 5.880</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_blight</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_28">
+      <pose>-0.000 0.440 1.390 0.110 0.150 1.640</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_29">
+      <pose>-0.561 0.000 1.250 0.100 -0.060 3.110</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_30">
+      <pose>0.506 -0.088 1.340 0.150 0.200 5.840</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_31">
+      <pose>-0.561 -0.066 1.010 0.090 0.270 3.330</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_32">
+      <pose>-0.022 0.462 1.350 0.220 -0.090 1.710</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_rhizoctonia</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_33">
+      <pose>-0.275 0.275 0.960 0.140 0.030 2.490</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_colletotrichum</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_34">
+      <pose>0.044 0.418 1.250 0.040 -0.070 1.470</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_35">
+      <pose>-0.462 0.110 1.250 0.130 0.010 2.930</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_algal</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_36">
+      <pose>-0.099 0.495 1.400 0.040 -0.160 1.670</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_healthy</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_37">
+      <pose>-0.286 0.231 1.450 0.180 0.110 2.180</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    <visual name="colletotrichum_leaf_38">
+      <pose>0.077 0.429 1.360 0.250 -0.150 1.570</pose>
+      <geometry>
+        <plane>
+          <normal>1 0 0</normal>
+          <size>0.196 0.392</size>
+        </plane>
+      </geometry>
+      <material>
+        <script>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/scripts</uri>
+          <uri>file:///home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures</uri>
+          <name>leaf_phomopsis</name>
+        </script>
+      </material>
+    </visual>
+
+    </link>
+  
+      
+      
+      
+      
+    
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+  
+    </model>
+</world>
+</sdf>

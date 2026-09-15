@@ -1,10 +1,12 @@
 <?xml version="1.0"?>
 <robot name="durian_bot" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <xacro:macro name="default_inertial" params="mass">
+  <!-- 通用惯性矩阵宏：支持自定义质量 -->
+  <xacro:macro name="default_inertial" params="mass ixx iyy izz">
     <inertial>
       <mass value="${mass}"/>
-      <inertia ixx="0.005" ixy="0.0" ixz="0.0" iyy="0.005" iyz="0.0" izz="0.005"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="${ixx}" ixy="0.0" ixz="0.0" iyy="${iyy}" iyz="0.0" izz="${izz}"/>
     </inertial>
   </xacro:macro>
 
@@ -12,10 +14,7 @@
     <inertial>
       <mass value="0.001"/>
       <origin xyz="0 0 0"/>
-      <inertia
-        ixx="1e-6" ixy="0" ixz="0"
-        iyy="1e-6" iyz="0"
-        izz="1e-6"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-6"/>
     </inertial>
   </link>
 
@@ -25,6 +24,7 @@
     <child link="base_link"/>
   </joint>
 
+  <!-- 主车体：总重 20kg，扣除4个轮子各2kg后，车身主体设为 12kg -->
   <link name="base_link">
     <visual>
       <geometry><box size="0.4 0.3 0.1"/></geometry>
@@ -33,19 +33,20 @@
     <collision>
       <geometry><box size="0.4 0.3 0.1"/></geometry>
     </collision>
-    <xacro:default_inertial mass="2.0"/>
+    <xacro:default_inertial mass="12.0" ixx="0.1" iyy="0.17" izz="0.2"/>
   </link>
 
-  <!-- 轮子 Macro：加入了 Gazebo 摩擦力参数，防止侧滑 -->
+  <!-- 轮子 Macro：每个轮子设定为 2.0 kg -->
   <xacro:macro name="wheel" params="prefix x y">
     <link name="${prefix}_wheel">
       <visual>
         <geometry><cylinder radius="0.05" length="0.02"/></geometry>
+        <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
       </visual>
       <collision>
         <geometry><cylinder radius="0.05" length="0.02"/></geometry>
       </collision>
-      <xacro:default_inertial mass="0.5"/>
+      <xacro:default_inertial mass="2.0" ixx="0.0013" iyy="0.0013" izz="0.0025"/>
     </link>
     
     <joint name="${prefix}_wheel_joint" type="continuous">
@@ -56,13 +57,14 @@
     </joint>
 
     <gazebo reference="${prefix}_wheel">
-      <mu1>1.0</mu1>
-      <mu2>1.0</mu2>
-      <kp>500000.0</kp>
+      <mu1>1.2</mu1>
+      <mu2>0.1</mu2>
+      <kp>1000000.0</kp>
       <kd>10.0</kd>
       <minDepth>0.001</minDepth>
       <maxVel>0.1</maxVel>
       <fdir1>1 0 0</fdir1>
+      <material>Gazebo/DarkGrey</material>
     </gazebo>
   </xacro:macro>
 
@@ -71,14 +73,16 @@
   <xacro:wheel prefix="left_rear" x="-0.1" y="0.18"/>
   <xacro:wheel prefix="right_rear" x="-0.1" y="-0.18"/>
 
+  <!-- 激光雷达 Link：修正为轻微向上倾斜 20 度 (-0.349 rad)，兼顾导航与上方树冠扫描 -->
   <link name="laser">
     <visual>
       <geometry><cylinder radius="0.03" length="0.04"/></geometry>
+      <material name="red"><color rgba="1 0 0 1"/></material>
     </visual>
     <collision>
       <geometry><cylinder radius="0.03" length="0.04"/></geometry>
     </collision>
-    <xacro:default_inertial mass="0.1"/>
+    <xacro:default_inertial mass="0.2" ixx="0.0001" iyy="0.0001" izz="0.0001"/>
   </link>
 
   <joint name="laser_joint" type="fixed">
@@ -87,23 +91,22 @@
     <origin xyz="0.25 0.0 0.8" rpy="0 0 0"/>
   </joint>
 
+  <!-- 相机 Link：向上倾斜 30 度 (-0.5236 rad)，专攻中高层病害叶片 -->
   <link name="camera_link">
     <visual>
       <geometry><box size="0.02 0.08 0.03"/></geometry>
+      <material name="green"><color rgba="0 1 0 1"/></material>
     </visual>
     <collision>
       <geometry><box size="0.02 0.08 0.03"/></geometry>
     </collision>
-    <inertial>
-      <mass value="0.05"/>
-      <inertia ixx="1e-5" iyy="1e-5" izz="1e-5" ixy="0" ixz="0" iyz="0"/>
-    </inertial>
+    <xacro:default_inertial mass="0.1" ixx="1e-5" iyy="1e-5" izz="1e-5"/>
   </link>
 
   <joint name="camera_joint" type="fixed">
     <parent link="base_link"/>
     <child link="camera_link"/>
-    <origin xyz="0.2 0 0.16" rpy="0 0 0"/>
+    <origin xyz="0.25 0 0.8" rpy="0 -0.5236 0"/>
   </joint>
 
   <link name="camera_link_optical">
@@ -119,7 +122,7 @@
     <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
   </joint>
 
-  <!-- 激光雷达传感器 -->
+  <!-- 激光雷达 Gazebo 插件 -->
   <gazebo reference="laser">
     <sensor name="laser_sensor" type="ray">
       <pose>0 0 0 0 0 0</pose>
@@ -157,14 +160,14 @@
     </sensor>
   </gazebo>
 
-  <!-- 深度相机传感器 -->
+  <!-- 深度相机 Gazebo 插件 -->
   <gazebo reference="camera_link">
     <sensor name="camera_sensor" type="depth">
       <always_on>true</always_on>
-      <visualize>true</visualize>
-      <update_rate>20.0</update_rate>
+      <visualize>false</visualize>
+      <update_rate>10.0</update_rate>
       <camera name="camera">
-        <horizontal_fov>1.047</horizontal_fov>
+        <horizontal_fov>1.0</horizontal_fov>
         <image>
           <width>640</width>
           <height>480</height>
@@ -188,35 +191,28 @@
     </sensor>
   </gazebo>
 
-  <!-- ✨ 核心修改：升级为四轮驱动的差速/滑移控制器 -->
+  <!-- 四轮驱动滑移控制器 -->
   <gazebo>
     <plugin name="skid_steer_drive_controller" filename="libgazebo_ros_diff_drive.so">
-      <!-- 轮子数量 -->
       <num_wheel_pairs>2</num_wheel_pairs>
       
-      <!-- 前轮对 -->
       <left_joint>left_front_wheel_joint</left_joint>
       <right_joint>right_front_wheel_joint</right_joint>
       
-      <!-- 后轮对 -->
       <left_joint>left_rear_wheel_joint</left_joint>
       <right_joint>right_rear_wheel_joint</right_joint>
 
-      <!-- 运动学参数 -->
       <wheel_separation>0.36</wheel_separation>
       <wheel_diameter>0.1</wheel_diameter>
 
-      <!-- 限制限制 -->
-      <max_wheel_torque>20</max_wheel_torque>
-      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+      <max_wheel_torque>200</max_wheel_torque>
+      <max_wheel_acceleration>1.5</max_wheel_acceleration>
 
-      <!-- 里程计配置 -->
       <publish_odom>true</publish_odom>
       <publish_odom_tf>true</publish_odom_tf>
       <odometry_frame>odom</odometry_frame>
       <robot_base_frame>base_footprint</robot_base_frame>
       
-      <!-- 协方差矩阵设置（防止 Nav2 因为里程计噪声过大而报错） -->
       <covariance_x>0.0001</covariance_x>
       <covariance_y>0.0001</covariance_y>
       <covariance_yaw>0.01</covariance_yaw>

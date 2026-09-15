@@ -1,0 +1,143 @@
+material leaf_healthy_b1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 0.5 0.5 0.5 1.0
+      diffuse 0.8 0.8 0.8 1.0
+      
+      texture_unit
+      {
+        texture leaf_healthy.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_algal_b1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 0.5 0.5 0.5 1.0
+      diffuse 0.8 0.8 0.8 1.0
+      
+      texture_unit
+      {
+        texture leaf_algal.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_blight_b1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 0.5 0.5 0.5 1.0
+      diffuse 0.8 0.8 0.8 1.0
+      
+      texture_unit
+      {
+        texture leaf_blight.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_colletotrichum_b1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 0.5 0.5 0.5 1.0
+      diffuse 0.8 0.8 0.8 1.0
+      
+      texture_unit
+      {
+        texture leaf_colletotrichum.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_phomopsis_b1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 0.5 0.5 0.5 1.0
+      diffuse 0.8 0.8 0.8 1.0
+      
+      texture_unit
+      {
+        texture leaf_phomopsis.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_rhizoctonia_b1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 0.5 0.5 0.5 1.0
+      diffuse 0.8 0.8 0.8 1.0
+      
+      texture_unit
+      {
+        texture leaf_rhizoctonia.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}

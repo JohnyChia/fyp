@@ -1,0 +1,62 @@
+============================================================
+TREE DISEASE SCAN RESULT
+============================================================
+
+Tree ID: 0
+
+Requested tree coordinates: 0.0, 0.0
+Matched tracker ID: 0
+Tracker distance: inf
+
+Total crops: 8
+YOLO crops with leaf detections: 1
+Valid frames: 0
+Rejected frames: 1
+
+Raw confidence sum: 0.010107
+Maximum raw confidence: 0.010107
+Maximum valid confidence: 0.000000
+
+Has disease votes: FALSE
+
+Total valid frame votes: 0
+
+Disease statistics:
+
+Leaf_Blight
+Vote count: 0
+Confidence sum: 0.000000
+Average confidence: 0.000000
+
+Leaf_Healthy
+Vote count: 0
+Confidence sum: 0.000000
+Average confidence: 0.000000
+
+Leaf_Algal
+Vote count: 0
+Confidence sum: 0.000000
+Average confidence: 0.000000
+
+Leaf_Colletotrichum
+Vote count: 0
+Confidence sum: 0.000000
+Average confidence: 0.000000
+
+Leaf_Phomopsis
+Vote count: 0
+Confidence sum: 0.000000
+Average confidence: 0.000000
+
+Leaf_Rhizoctonia
+Vote count: 0
+Confidence sum: 0.000000
+Average confidence: 0.000000
+
+---
+
+FINAL DISEASE: Unknown
+FINAL VOTE COUNT: 0
+FINAL AVERAGE CONFIDENCE: 0.000000
+
+============================================================

@@ -1,42 +1,58 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import TimerAction, IncludeLaunchDescription
+from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command
+from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
 import os
 import xacro
+
 
 def generate_launch_description():
     pkg_path = get_package_share_directory('durian_inspection_pkg')
     gazebo_ros_pkg = get_package_share_directory('gazebo_ros')
 
+    materials_path = os.path.join(pkg_path, 'config', 'materials')
+    gazebo_builtin = '/usr/share/gazebo-11'
+    resource_paths = [
+        os.path.join(materials_path, 'textures'),
+        os.path.join(materials_path, 'scripts'),
+        materials_path,
+        gazebo_builtin,
+        os.environ.get('GAZEBO_RESOURCE_PATH', ''),
+    ]
+    os.environ['GAZEBO_RESOURCE_PATH'] = ':'.join(
+        path for path in resource_paths if path
+    )
+
     urdf_file = os.path.join(pkg_path, 'urdf', 'robot.urdf')
     doc = xacro.process_file(urdf_file)
     robot_description_content = doc.toxml()
 
-    world_file = os.path.expanduser('~/durian_ws/src/durian_inspection_pkg/worlds/durian_farm.world')
+    world_file = os.path.expanduser('/home/johny/durian_ws/experiment/durian_farm_scale_1x.world')
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(gazebo_ros_pkg, 'launch', 'gazebo.launch.py')),
         launch_arguments={'world': world_file, 'verbose': 'true'}.items()
     )
 
     nav2_params_file = os.path.join(pkg_path, 'config', 'nav2_params.yaml')
+
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
         ),
         launch_arguments={
-            'use_sim_time': 'true',       
+            'use_sim_time': 'true',
             'params_file': nav2_params_file,
-            'autostart': 'true'
+            'autostart': 'true',
+            'use_composition': 'False'
         }.items()
     )
 
     return LaunchDescription([
         gazebo,
-    
-        Node(package='robot_state_publisher', executable='robot_state_publisher', 
+
+        Node(package='robot_state_publisher', executable='robot_state_publisher',
              parameters=[{'robot_description': robot_description_content, 'use_sim_time': True}]),
 
         Node(
@@ -46,11 +62,16 @@ def generate_launch_description():
             parameters=[{'robot_description': robot_description_content, 'use_sim_time': True}],
         ),
 
-        Node(package='gazebo_ros', executable='spawn_entity.py', 
-             arguments=['-entity', 'durian_bot', '-topic', '/robot_description', '-z', '0.2']),
+        TimerAction(
+            period=10.0,
+            actions=[
+                Node(package='gazebo_ros', executable='spawn_entity.py',
+                     arguments=['-entity', 'durian_bot', '-topic', '/robot_description', '-z', '0.2', '-timeout', '120.0'])
+            ]
+        ),
 
         TimerAction(
-            period=15.0, 
+            period=15.0,
             actions=[
                TimerAction(
                     period=8.0,
@@ -61,26 +82,10 @@ def generate_launch_description():
                     package='durian_inspection_pkg',
                     executable='map_publisher',
                     name='map_publisher',
-                    parameters=[{'use_sim_time': True}], 
+                    parameters=[{'use_sim_time': True, 'world_path': world_file}],
                     output='screen'
                 ),
 
-                Node(
-                    package='depth_image_proc',
-                    executable='point_cloud_xyz_node',
-                    name='point_cloud_xyz_node',
-                    remappings=[
-                        ('image_rect', '/camera/depth/image_raw'),
-                        ('camera_info', '/camera/depth/camera_info'),
-                        ('points', '/camera/points')
-                    ],
-                    parameters=[{
-                        'use_sim_time': True,
-                        'queue_size': 100,
-                        'approx_sync': True
-                    }]
-                ),
-                
                 Node(
                     package='rtabmap_sync', executable='rgbd_sync', name='rgbd_sync',
                     remappings=[
@@ -91,44 +96,55 @@ def generate_launch_description():
                     ],
                     parameters=[{
                         'approx_sync': True,
-                        'queue_size': 50,     
-                        'slop': 0.5,          
-                        'use_sim_time': True  
+                        'approx_sync_max_interval': 0.2,
+                        'sync_queue_size': 100,
+                        'topic_queue_size': 100,
+                        'use_sim_time': True
                     }]
                 ),
-                
-               Node(
+
+                Node(
                     package='rtabmap_slam', executable='rtabmap', name='rtabmap',
                     parameters=[{
-                        'use_sim_time': True, 
-                        'subscribe_rgbd': True, 
-                        'subscribe_scan': False, 
+                        'use_sim_time': True,
+                        'subscribe_rgbd': True,
+                        'subscribe_scan': False,
                         'subscribe_depth': False,
-                        'subscribe_rgb': False,  
-                        'publish_tf': True,          
+                        'subscribe_rgb': False,
+                        'sync_queue_size': 50,
+                        'topic_queue_size': 50,
+                        'publish_tf': True,
                         'odom_frame_id': 'odom',
                         'map_frame_id': 'map',
                         'frame_id': 'base_footprint',
                         'tf_delay': 0.05,
-                        'Rtabmap/DetectionRate': '1.0',    
-                        'Grid/FromDepth': 'true',            
-                        'Grid/RangeMax': '5.0',            
-                        'Grid/CellSize': '0.05'            
+                        'Rtabmap/DetectionRate': '1.0',
+                        'Grid/FromDepth': 'true',
+                        'Grid/RangeMax': '5.0',
+                        'Grid/CellSize': '0.05'
                     }],
                     remappings=[
                         ('rgbd_image', '/rtabmap/rgbd_image'),
                         ('odom', '/odom'),
-                        ('grid_map', '/map'),             
+                        ('grid_map', '/map'),
                         ('cloud_map', '/rtabmap/cloud_map')
                     ],
-                    arguments=['-d'] 
+                    arguments=['-d']
                 ),
 
                 Node(
                     package='durian_inspection_pkg',
                     executable='inspection_server',
                     name='inspection_server',
-                    parameters=[{'use_sim_time': True}], 
+                    parameters=[{'use_sim_time': True, 'world_path': world_file}],
+                    output='screen'
+                ),
+
+                Node(
+                    package='durian_inspection_pkg',
+                    executable='bridge_node',
+                    name='bridge_node',
+                    parameters=[{'use_sim_time': True, 'world_path': world_file}],
                     output='screen'
                 ),
 
@@ -136,12 +152,43 @@ def generate_launch_description():
                     package='durian_inspection_pkg',
                     executable='gui',
                     name='gui',
-                    parameters=[{'use_sim_time': True}], 
+                    parameters=[{'use_sim_time': True, 'world_path': world_file}],
+                    output='screen'
+                ),
+
+                Node(
+                    package='durian_inspection_pkg',
+                    executable='vision_node',
+                    name='vision_node',
+                    parameters=[{
+                        'use_sim_time': True,
+                        'capture_root': '/home/johny/durian_ws/captured_images',
+                        'database_path': '/home/johny/durian_ws/durian_inspection.db',
+                        'capture_interval_sec': 0.1,
+                        'rgb_depth_tolerance_sec': 0.15,
+                    }],
+                    output='screen'
+                ),
+
+                Node(
+                    package='durian_inspection_pkg',
+                    executable='processing_node',
+                    name='processing_node',
+                    parameters=[{
+                        'use_sim_time': True,
+                        'database_path': '/home/johny/durian_ws/durian_inspection.db',
+                        'processed_root': '/home/johny/durian_ws/processed_images',
+                        'model_tree_path': '/home/johny/durian_ws/models/durian_tree/best_tree_hybrid_v2.pt',
+                        'model_fruit_path': '/home/johny/durian_ws/models/durian/best_v8.pt',
+                        'model_leaf_path': '/home/johny/durian_ws/experiment/outputs/production_efficientnet/weights/best.pt',
+                        'leaf_inference_scales': [1024, 768, 512],
+                        'leaf_roi_context_scale': 1.5,
+                        'leaf_roi_max_area_ratio': 0.85,
+                        'leaf_roi_min_size': 80,
+                    }],
                     output='screen'
                 ),
             ]
         ),
 
-        # RViz2
-        Node(package='rviz2', executable='rviz2', name='rviz2', parameters=[{'use_sim_time': True}])
     ])

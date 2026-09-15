@@ -23,6 +23,8 @@ __pycache__/
 # Generated files
 *.gv
 *.pdf
+captured_images/
+processed_images/
 
 # ML models
 *.pt
@@ -39,6 +41,11 @@ src/Depth-Anything-V2/
 src/explore_lite/
 src/explore_lite_msgs/
 src/map_merge/
+
+# Local training and datasets
+experiment/
+hybrid_datasets/
+external_datasets/
 
 # Temporary
 Function

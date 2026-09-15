@@ -1,0 +1,720 @@
+
+material leaf_healthy_v0
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_healthy_v0.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_healthy_v1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_healthy_v1.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_healthy_v2
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_healthy_v2.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_healthy_v3
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_healthy_v3.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_healthy_v4
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_healthy_v4.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_algal_v0
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_algal_v0.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_algal_v1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_algal_v1.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_algal_v2
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_algal_v2.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_algal_v3
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_algal_v3.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_algal_v4
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_algal_v4.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_blight_v0
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_blight_v0.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_blight_v1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_blight_v1.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_blight_v2
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_blight_v2.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_blight_v3
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_blight_v3.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_blight_v4
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_blight_v4.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_colletotrichum_v0
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_colletotrichum_v0.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_colletotrichum_v1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_colletotrichum_v1.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_colletotrichum_v2
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_colletotrichum_v2.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_colletotrichum_v3
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_colletotrichum_v3.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_colletotrichum_v4
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_colletotrichum_v4.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_phomopsis_v0
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_phomopsis_v0.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_phomopsis_v1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_phomopsis_v1.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_phomopsis_v2
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_phomopsis_v2.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_phomopsis_v3
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_phomopsis_v3.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_phomopsis_v4
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_phomopsis_v4.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_rhizoctonia_v0
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_rhizoctonia_v0.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_rhizoctonia_v1
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_rhizoctonia_v1.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_rhizoctonia_v2
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_rhizoctonia_v2.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_rhizoctonia_v3
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_rhizoctonia_v3.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}
+
+material leaf_rhizoctonia_v4
+{
+  technique
+  {
+    pass
+    {
+      depth_write on
+      depth_check on
+      alpha_rejection greater 128
+      cull_hardware none
+      ambient 1.0 1.0 1.0 1.0
+      diffuse 1.0 1.0 1.0 1.0
+      
+      texture_unit
+      {
+        texture leaf_rhizoctonia_v4.png
+        tex_address_mode clamp
+        filtering trilinear
+        max_anisotropy 8
+      }
+    }
+  }
+}

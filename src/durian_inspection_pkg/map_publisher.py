@@ -6,6 +6,7 @@ import sensor_msgs_py.point_cloud2 as pc2
 from std_msgs.msg import Header
 import sqlite3
 
+
 class DbMapPublisher(Node):
     def __init__(self):
         super().__init__('map_publisher')
@@ -19,9 +20,7 @@ class DbMapPublisher(Node):
         self.timer = self.create_timer(1.0, self.publish_once)
 
     def publish_once(self):
-
         if self.cloud_msg:
-
             self.cloud_msg.header.stamp = (
                 self.get_clock()
                 .now()
@@ -37,11 +36,11 @@ class DbMapPublisher(Node):
         try:
             conn = sqlite3.connect("/home/johny/durian_ws/durian_data.db")
             cursor = conn.cursor()
-            # 抽样提取地图点，防止数据量过大导致网络卡死
+
             cursor.execute("SELECT x, y, z, rgb FROM point_clouds WHERE rowid % 50 = 0 AND x BETWEEN -200 AND 200 AND y BETWEEN -200 AND 200")
             rows = cursor.fetchall()
             conn.close()
-            
+
             header = Header()
 
             header.frame_id = "map"
@@ -62,6 +61,7 @@ class DbMapPublisher(Node):
             self.get_logger().error(f"Failed to read map data from DB: {e}")
             return None
 
+
 def main(args=None):
     rclpy.init(args=args)
     node = DbMapPublisher()
@@ -72,6 +72,7 @@ def main(args=None):
     finally:
         node.destroy_node()
         rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

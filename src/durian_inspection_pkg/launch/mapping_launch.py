@@ -7,6 +7,7 @@ from ament_index_python.packages import get_package_share_directory
 import os
 import xacro
 
+
 def generate_launch_description():
     pkg_path = get_package_share_directory('durian_inspection_pkg')
     gazebo_ros_pkg = get_package_share_directory('gazebo_ros')
@@ -40,7 +41,7 @@ def generate_launch_description():
         arguments=['-entity', 'durian_bot', '-topic', '/robot_description', '-z','0.10'],
         output='screen'
     )
-   
+
     return LaunchDescription([
         gazebo,
 
@@ -61,9 +62,8 @@ def generate_launch_description():
             }],
         ),
 
-
         TimerAction(
-            period=8.0, 
+            period=8.0,
             actions=[spawn_entity]
         ),
 
@@ -81,9 +81,8 @@ def generate_launch_description():
                     package='tf2_ros',
                     executable='static_transform_publisher',
                     name='camera_tf_pub',
-                    arguments=['0.2', '0', '0.16', '0', '0', '0', 'base_link', 'camera_link'] 
+                    arguments=['0.2', '0', '0.16', '0', '0', '0', 'base_link', 'camera_link']
                 ),
-                
 
                 Node(
                     package='depth_image_proc',
@@ -97,7 +96,7 @@ def generate_launch_description():
                     parameters=[{
                         'use_sim_time': True,
                         'approximate_sync': True
-                        
+
                     }]
                 ),
 
@@ -114,6 +113,8 @@ def generate_launch_description():
                     parameters=[{
                         'approx_sync': True,
                         'approx_sync_max_interval': 0.1,
+                        'sync_queue_size': 100,
+                        'topic_queue_size': 100,
                     }]
                 ),
 
@@ -128,13 +129,13 @@ def generate_launch_description():
                         'map_frame_id': 'map',
                         'subscribe_depth': False,
                         'subscribe_rgb': False,
-                        'subscribe_rgbd': True,     
-                        'subscribe_scan': True,      
-                        'Grid/Sensor': '1',      
-                        'Grid/3D': 'true',       
+                        'subscribe_rgbd': True,
+                        'subscribe_scan': True,
+                        'Grid/Sensor': '1',
+                        'Grid/3D': 'true',
                         'Mem/IncrementalMemory': 'true',
-                        'Mem/InitWMWithAllNodes': 'false', 
-                        'Cloud/VoxelSize': '0.01', 
+                        'Mem/InitWMWithAllNodes': 'false',
+                        'Cloud/VoxelSize': '0.01',
                         'Cloud/Decimation': '1',
                      }],
                     remappings=[
@@ -145,15 +146,6 @@ def generate_launch_description():
                     output='screen'
                 ),
 
-                Node(
-                    package='teleop_twist_keyboard',
-                    executable='teleop_twist_keyboard',
-                    name='teleop_keyboard',
-                    output='screen',
-                    prefix='xterm -e',
-                    remappings=[('/cmd_vel', '/cmd_vel')] 
-                ),
-              
             ]
         ),
 

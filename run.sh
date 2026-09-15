@@ -26,8 +26,17 @@ colcon build --symlink-install || { echo "Build failed"; exit 1; }
 
 source install/setup.bash
 
+# Gazebo Classic needs its built-in media/shader, plugin, model and OGRE paths.
+# Keep this after the ROS/workspace setup so launch inherits the complete env.
+if [ -f /usr/share/gazebo/setup.sh ]; then
+    source /usr/share/gazebo/setup.sh
+else
+    echo "Gazebo setup not found: /usr/share/gazebo/setup.sh"
+    exit 1
+fi
+
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export GAZEBO_MODEL_PATH=$HOME/.gazebo/models
+export GAZEBO_MODEL_PATH="$HOME/.gazebo/models:${GAZEBO_MODEL_PATH}"
 unset CYCLONEDDS_URI
 export ROS_DOMAIN_ID=0
 

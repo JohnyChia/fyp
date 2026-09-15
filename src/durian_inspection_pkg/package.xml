@@ -19,6 +19,13 @@
 
   <exec_depend>durian_message</exec_depend> -->
   <depend>durian_message</depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
 
   <exec_depend>python3-sklearn</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
