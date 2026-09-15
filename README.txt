@@ -1,131 +1,355 @@
-DURIAN INSPECTION SYSTEM
-========================
+===============================================================================
+                         DURIAN INSPECTION SYSTEM
+===============================================================================
 
-This repository contains a ROS 2 and Gazebo-based autonomous durian tree
-inspection system. The robot discovers trees, navigates to each target,
-captures synchronized RGB-D observations, returns home, processes the saved
-observations with computer-vision models, stores the results in SQLite, and
-makes the inspection results available to the Flutter application.
+Autonomous ROS 2 durian-tree inspection using RGB-D capture, deferred YOLO
+processing, SQLite result storage, and a Flutter monitoring application.
 
 
-SYSTEM WORKFLOW
-===============
+-------------------------------------------------------------------------------
+1. PROJECT OVERVIEW
+-------------------------------------------------------------------------------
 
-1. The Inspection Server discovers a tree and navigates the robot to a safe
-   scanning position.
-2. vision_node.py receives RGB, depth, camera calibration, inspection ID,
-   target tree ID, and scan state information.
-3. Synchronized RGB-D observations and their metadata are stored under
-   captured_images/<inspection_id>/<tree_id>/.
-4. The tree is recorded in SQLite with the tree-level status "processing".
-5. After all trees have been scanned, the robot returns home and calls the
-   process_captured_images service.
-6. processing_node.py loads the captured observations and executes tree,
-   fruit, and leaf-disease inference without changing the original detection
-   and aggregation logic.
-7. Annotated output images are stored under
-   processed_images/<inspection_id>/<tree_id>/.
-8. When the aggregated result has been stored successfully, the tree-level
-   status changes from "processing" to "completed". If processing fails, the
-   tree remains "processing" and the error is recorded.
+This project controls a mobile robot that discovers durian trees, navigates to
+each tree, captures synchronized RGB and depth observations, and classifies the
+inspection results after returning home.
 
+Image capture and model inference are separated into two ROS 2 nodes:
 
-MAIN COMPONENTS
-===============
+  vision_node.py
+      Performs lightweight online RGB-D capture and durable evidence storage.
 
-src/durian_inspection_pkg/vision_node.py
-    Captures synchronized RGB and depth frames and stores durable observation
-    evidence. This node does not perform YOLO inference.
+  processing_node.py
+      Performs deferred tree, fruit, and leaf-disease inference using the saved
+      observations.
 
-src/durian_inspection_pkg/processing_node.py
-    Performs deferred tree detection, distance calculation, Tree ROI cropping,
-    fruit detection, multi-scale leaf-disease detection, evidence aggregation,
-    processed-image storage, and SQLite result finalization.
-
-src/durian_inspection_pkg/observation_store.py
-    Defines and migrates the SQLite tables used for captured observations,
-    inspection results, processing errors, and processing cache entries.
-
-src/durian_inspection_pkg/inspection_server.py
-    Controls tree discovery, target selection, navigation, scanning, return to
-    the home position, and deferred-processing service invocation.
-
-src/durian_inspection_pkg/bridge_node.py
-    Provides the bridge used by the user interface to communicate with ROS 2.
-
-src/durian_inspection_pkg/map_publisher.py
-    Publishes the stored map point cloud for the inspection system.
-
-durian_flutter_app/
-    Contains the Flutter application used to display inspection information and
-    communicate with the ROS-facing API.
+This separation keeps robot scanning responsive while ensuring that every tree
+has a clear and recoverable processing state.
 
 
-BUILD AND RUN
-=============
+-------------------------------------------------------------------------------
+2. SYSTEM FLOW
+-------------------------------------------------------------------------------
 
-The workspace is designed for ROS 2 on Ubuntu with Gazebo Classic available.
-From the workspace root, make the startup script executable once:
+  Tree discovery and navigation
+              |
+              v
+  Inspection Server selects and locks a target tree
+              |
+              v
+  Robot stops at a safe scanning position
+              |
+              v
+  +--------------------------- VISION CAPTURE ----------------------------+
+  | Camera RGB + Depth + Camera Info                                      |
+  |                  |                                                    |
+  |                  v                                                    |
+  |       Synchronize RGB-D timestamps                                    |
+  |                  |                                                    |
+  |                  v                                                    |
+  |       Save RGB, Depth, TF and metadata                                |
+  |                  |                                                    |
+  |                  v                                                    |
+  |       captured_images/<inspection_id>/<tree_id>/                      |
+  |       captured_observations.status = CAPTURED                         |
+  +-----------------------------------------------------------------------+
+              |
+              v
+  inspection_log.status = processing
+              |
+              v
+  Robot inspects the remaining trees and returns home
+              |
+              v
+  +------------------------- VISION PROCESSING ---------------------------+
+  | Trigger process_captured_images service                               |
+  |                  |                                                    |
+  |                  v                                                    |
+  |       Validate hashes and restore RGB-D context                       |
+  |                  |                                                    |
+  |                  v                                                    |
+  |       Tree YOLO -> Distance -> Target association -> Tree ROI         |
+  |                  |                                                    |
+  |                  +--------------------+                               |
+  |                  |                    |                               |
+  |                  v                    v                               |
+  |          Fruit detection      Leaf-disease detection                  |
+  |                  |                    |                               |
+  |                  +--------------------+                               |
+  |                               |                                       |
+  |                               v                                       |
+  |                    Aggregate per-tree evidence                        |
+  |                               |                                       |
+  |                               v                                       |
+  |       processed_images/<inspection_id>/<tree_id>/                     |
+  +-----------------------------------------------------------------------+
+              |
+              v
+  Store disease, coverage, confidence, priority and remedy in SQLite
+              |
+              v
+  inspection_log.status = completed
+              |
+              v
+  Flutter application displays the inspection result
 
-    chmod +x run.sh
 
-Start the complete system with:
+-------------------------------------------------------------------------------
+3. TREE STATUS CONTRACT
+-------------------------------------------------------------------------------
 
-    ./run.sh
+  processing
+      Capture for the tree is complete, but deferred inference has not yet
+      produced a durable final result.
 
-The script removes old build outputs, builds the ROS 2 workspace with symlink
-installation, sources the workspace and Gazebo environments, performs a DDS
-sanity check, and launches navigation_launch.py.
+  completed
+      The final disease result and supporting values have been stored
+      successfully and are ready for the Flutter application.
 
-To build manually:
+  processing + processing_error
+      Processing failed. The error is recorded and the tree deliberately
+      remains "processing" instead of being incorrectly marked "completed".
 
-    colcon build --symlink-install
-    source install/setup.bash
-    source /usr/share/gazebo/setup.sh
-    ros2 launch durian_inspection_pkg navigation_launch.py
+Normal transition:
 
-
-RUNTIME OUTPUTS
-===============
-
-captured_images/
-    Raw RGB, depth, and metadata evidence created by vision_node.py.
-
-processed_images/
-    Annotated observations created by processing_node.py.
-
-durian_inspection.db
-    SQLite database containing captured-observation and inspection-result data.
-
-These runtime outputs are intentionally excluded from Git.
+      processing  ------------------------------>  completed
+                     successful durable result
 
 
-MODELS AND LOCAL DATA
-=====================
+-------------------------------------------------------------------------------
+4. MAIN ROS 2 COMPONENTS
+-------------------------------------------------------------------------------
 
-Trained model files such as *.pt and *.onnx are excluded from this repository.
-They must be placed at the paths configured in the ROS launch file or supplied
-through ROS parameters before inference is started.
+  src/durian_inspection_pkg/inspection_server.py
+      Discovers trees, selects targets, controls navigation and scanning,
+      returns the robot home, and triggers deferred processing.
 
-The following local training and dataset directories are also intentionally
-excluded from GitHub:
+  src/durian_inspection_pkg/vision_node.py
+      Receives RGB, depth and camera information; synchronizes frames; records
+      TF and metadata; calculates integrity hashes; and stores observations.
+      It does not execute YOLO inference.
 
-    experiment/
-    hybrid_datasets/
-    external_datasets/
+  src/durian_inspection_pkg/processing_node.py
+      Loads captured observations and executes tree detection, depth-based
+      distance calculation, target association, Tree ROI cropping, fruit
+      detection, multi-scale leaf-disease detection and result aggregation.
 
-ROS build outputs, Python caches, Flutter build outputs, databases, logs, point
-cloud files, captured images, and processed images are excluded as well.
+  src/durian_inspection_pkg/observation_store.py
+      Creates and migrates the SQLite schema used for observation records,
+      inspection results, processing errors and reusable processing cache.
+
+  src/durian_inspection_pkg/bridge_node.py
+      Provides communication between the ROS 2 system and user-interface API.
+
+  src/durian_inspection_pkg/map_publisher.py
+      Publishes the stored point-cloud map used by the inspection system.
+
+  src/durian_inspection_pkg/collector.py
+      Supports controlled RGB-D data collection for Gazebo experiments.
+
+  durian_flutter_app/
+      Flutter application for inspection monitoring and result display.
 
 
-TREE PROCESSING STATUS
-======================
+-------------------------------------------------------------------------------
+5. REPOSITORY STRUCTURE
+-------------------------------------------------------------------------------
 
-processing
-    Image capture for the tree is complete, but deferred model processing has
-    not yet produced a durable final result.
+  durian_ws/
+  |
+  +-- README.txt
+  +-- run.sh
+  +-- models/
+  |   +-- durian_leaf/
+  |       +-- original.pt
+  |       +-- baseline.pt
+  |       +-- advanced.pt
+  |
+  +-- src/
+  |   +-- durian_inspection_pkg/
+  |   +-- durian_message/
+  |
+  +-- durian_flutter_app/
+  +-- captured_images/          generated at runtime; not stored in Git
+  +-- processed_images/         generated at runtime; not stored in Git
+  +-- build/                    generated by colcon; not stored in Git
+  +-- install/                  generated by colcon; not stored in Git
+  +-- log/                      generated by colcon; not stored in Git
+  +-- experiment/               local training work; excluded from GitHub
+  +-- hybrid_datasets/          local dataset; excluded from GitHub
+  +-- external_datasets/        local dataset; excluded from GitHub
 
-completed
-    The final disease, coverage, confidence, priority, and remedy values have
-    been stored successfully and can be displayed by the Flutter application.
 
+-------------------------------------------------------------------------------
+6. MODEL CHECKPOINTS
+-------------------------------------------------------------------------------
+
+The following six-class durian leaf checkpoints are stored with Git LFS:
+
+  models/durian_leaf/original.pt
+      YOLO model trained with the original Gazebo dataset.
+
+  models/durian_leaf/baseline.pt
+      YOLO model trained with the balanced real and Gazebo dataset.
+
+  models/durian_leaf/advanced.pt
+      Advanced six-class checkpoint intended for the EfficientNet-backed
+      experiment.
+
+Other *.pt and *.onnx files remain excluded unless they are explicitly added to
+Git LFS.
+
+
+-------------------------------------------------------------------------------
+7. REQUIREMENTS
+-------------------------------------------------------------------------------
+
+Recommended environment:
+
+  - Ubuntu 22.04
+  - ROS 2 Humble
+  - Gazebo Classic with gazebo_ros
+  - Python 3
+  - OpenCV and cv_bridge
+  - NumPy and scikit-learn
+  - PyTorch and Ultralytics
+  - Navigation2 and TF2
+  - Git LFS
+  - Flutter SDK for the mobile application
+
+The exact model and ROS dependencies must be available before launching the
+complete inspection pipeline.
+
+
+-------------------------------------------------------------------------------
+8. CLONE THE PROJECT
+-------------------------------------------------------------------------------
+
+Install and enable Git LFS before cloning or pulling model checkpoints:
+
+  sudo apt-get update
+  sudo apt-get install -y git-lfs
+  git lfs install
+
+Clone the repository:
+
+  git clone https://github.com/JohnyChia/fyp.git
+  cd fyp
+  git lfs pull
+
+If the workspace must be located at the path expected by the current launch
+configuration, clone or move it to:
+
+  /home/johny/durian_ws
+
+
+-------------------------------------------------------------------------------
+9. BUILD AND RUN
+-------------------------------------------------------------------------------
+
+Make the startup script executable once:
+
+  chmod +x run.sh
+
+Start the complete system:
+
+  ./run.sh
+
+The startup script performs these operations:
+
+  1. Stops old robot-related processes.
+  2. Clears stale Fast DDS shared-memory files.
+  3. Removes previous build, install and log outputs.
+  4. Builds the workspace with colcon --symlink-install.
+  5. Sources the ROS 2 workspace and Gazebo environment.
+  6. Configures DDS and Gazebo environment variables.
+  7. Performs a short DDS sanity check.
+  8. Launches navigation_launch.py.
+
+Manual build and launch:
+
+  cd /home/johny/durian_ws
+  colcon build --symlink-install
+  source install/setup.bash
+  source /usr/share/gazebo/setup.sh
+  ros2 launch durian_inspection_pkg navigation_launch.py
+
+
+-------------------------------------------------------------------------------
+10. RUNTIME DATA
+-------------------------------------------------------------------------------
+
+Captured observations:
+
+  captured_images/<inspection_id>/<tree_id>/
+      <observation_id>_rgb.png
+      <observation_id>_depth.tiff
+      <observation_id>.json
+
+Processed observations:
+
+  processed_images/<inspection_id>/<tree_id>/
+      <observation_id>_processed.jpg
+
+SQLite database:
+
+  durian_inspection.db
+
+Important SQLite tables:
+
+  captured_observations
+      Stores file paths, timestamps, hashes and observation processing state.
+
+  inspection_log
+      Stores one result row per inspected tree, including its tree-level status.
+
+  tree_processing_cache
+      Reuses a previous result only when both the observation batch and pipeline
+      fingerprint match.
+
+
+-------------------------------------------------------------------------------
+11. DATA INTEGRITY AND FAILURE HANDLING
+-------------------------------------------------------------------------------
+
+  - RGB, depth and metadata files are written atomically.
+  - SHA-256 hashes are verified before deferred processing.
+  - Exact duplicate observations are recorded instead of silently reused as
+    independent evidence.
+  - Cache entries depend on both observation content and pipeline fingerprint.
+  - A failed tree remains "processing" and receives a processing_error value.
+  - A tree becomes "completed" only after its final result is stored durably.
+
+
+-------------------------------------------------------------------------------
+12. COMMON ISSUES
+-------------------------------------------------------------------------------
+
+Permission denied when running ./run.sh
+
+  chmod +x run.sh
+
+Gazebo reports that the shader library is missing
+
+  source /usr/share/gazebo/setup.sh
+
+Model files appear as small text pointers after cloning
+
+  git lfs install
+  git lfs pull
+
+VS Code still shows files as modified after a successful push
+
+  git status
+
+If Git reports a clean working tree, save all open editor buffers and refresh
+the VS Code Source Control panel or reload the VS Code window.
+
+
+-------------------------------------------------------------------------------
+13. GITHUB REPOSITORY
+-------------------------------------------------------------------------------
+
+  https://github.com/JohnyChia/fyp
+
+===============================================================================
