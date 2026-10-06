@@ -1,0 +1,7 @@
+# Shared interpreter used by the selectable leaf-backend worker launchers.
+# RF-DETR and D-FINE framework/dependency trees remain isolated under runtime/.
+--index-url https://download.pytorch.org/whl/cu124
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+--extra-index-url https://pypi.org/simple
+ultralytics==8.4.61

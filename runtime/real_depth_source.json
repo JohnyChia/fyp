@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "status": "BLOCKER",
+  "classification": "NO DEPTH SOURCE",
+  "scope": "REAL DEPLOYMENT BLOCKER",
+  "required_topic": "/camera/depth/image_raw",
+  "required_consumer": "src/durian_inspection_pkg/vision_node.py",
+  "gazebo_source": {
+    "status": "PASS",
+    "node_or_plugin": "gazebo_ros_camera depth sensor plugin",
+    "launch_method": "robot_state_publisher/Gazebo spawn through navigation or mapping launch",
+    "topic": "/camera/depth/image_raw",
+    "format": "sensor_msgs/msg/Image; passthrough depth encoding consumed by cv_bridge",
+    "timestamp_behavior": "Gazebo sensor timestamps; vision_node selects nearest buffered depth frame within 0.15 seconds",
+    "frame_id": "camera_link_optical"
+  },
+  "real_source": {
+    "status": "BLOCKER",
+    "searched_components": [
+      "launch files",
+      "ROS nodes",
+      "bridge_node.py",
+      "collector.py",
+      "device and application code",
+      "workspace documentation"
+    ],
+    "finding": "No non-Gazebo publisher for /camera/depth/image_raw exists in the workspace. bridge_node publishes RGB and CameraInfo only.",
+    "impact": "Real capture cannot persist an observation because vision_node requires a synchronized depth frame."
+  }
+}
+

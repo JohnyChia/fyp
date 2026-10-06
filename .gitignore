@@ -8,7 +8,10 @@ rosbag2_*/
 
 # Database
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
+*.sqlite3
 
 # Logs
 *.log
@@ -19,6 +22,8 @@ rosbag2_*/
 # Python cache
 __pycache__/
 *.pyc
+.pytest_cache/
+.mypy_cache/
 
 # Generated files
 *.gv
@@ -28,6 +33,8 @@ processed_images/
 
 # ML models
 *.pt
+*.pth
+*.ckpt
 *.onnx
 !models/durian_leaf/*.pt
 
@@ -43,10 +50,49 @@ src/explore_lite/
 src/explore_lite_msgs/
 src/map_merge/
 
-# Local training and datasets
+# Locally materialized backend runtimes and vendor checkouts
+runtime/leaf_backend_deps/
+runtime/leaf_backend_sources/
+
+# Scientific datasets, formal packages and training evidence are local-only.
+# Existing historical tracked files are not silently removed by this rule.
 experiment/
+
+# Training/runtime products
+experiment/**/outputs/
+experiment/**/runs/
+experiment/**/checkpoints/
+experiment/**/*.cache
+experiment/**/*runtime*.yaml
+experiment/**/*runtime*.yml
 hybrid_datasets/
 external_datasets/
+
+# Archives and notebook-service products
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+kaggle.json
+colab_outputs/
+
+# Secrets and machine-local credentials
+.env
+.env.*
+!.env.example
+*service_account*.json
+*client_secret*.json
+credentials/
+
+# Local audit and scientific narrative retained outside the public source tree
+docs/cleanup/
+docs/evidence_*
+docs/experiment_timeline.md
+docs/final_system_state.md
+docs/fyp_*
+docs/model_*
+docs/runtime_dependency_audit.md
 
 # Temporary
 Function

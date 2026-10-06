@@ -16,6 +16,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _serviceReady = false;
   bool _isInspecting = false;
   bool _inspectionFinished = false;
+  bool _inspectionSucceeded = false;
+  String _inspectionState = 'UNKNOWN';
+  String _failureReason = '';
   String _statusText = 'Connecting...';
   Timer? _pollTimer;
   List<dynamic> _historyData = [];
@@ -87,16 +90,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         });
         return;
       }
-      final finished = status['inspection_finished'] as bool? ?? false;
+      final mission = MissionStatusSnapshot.fromJson(status);
       setState(() {
         _serviceReady = status['service_ready'] as bool? ?? false;
         _statusText = status['current_status'] as String? ?? 'Running';
-        _inspectionFinished = finished;
+        _inspectionState = mission.state;
+        _isInspecting = mission.isActive;
+        _inspectionFinished = mission.finished;
+        _inspectionSucceeded = mission.succeeded;
+        _failureReason = mission.failureReason;
       });
-      if (finished && !_bannerController.isCompleted) {
-        _isInspecting = false;
+      if (mission.finished && !_bannerController.isCompleted) {
         _bannerController.forward();
-      } else if (!finished && _bannerController.isCompleted) {
+      } else if (!mission.finished && _bannerController.isCompleted) {
         _bannerController.reverse();
       }
     } catch (_) {
@@ -124,19 +130,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _showSnack('Service not ready, please wait for connection');
       return;
     }
-    setState(() {
-      _isInspecting = true;
-      _inspectionFinished = false;
-    });
-    _bannerController.reverse();
     final ok = await ApiService.sendCommand(_robotIp, 'start');
-    if (!ok && mounted) _showSnack('Failed to send command');
+    if (!mounted) return;
+    if (!ok) {
+      _showSnack('Failed to send command');
+    } else {
+      await _pollStatus();
+    }
   }
 
   Future<void> _sendStop() async {
-    setState(() => _isInspecting = false);
     final ok = await ApiService.sendCommand(_robotIp, 'stop');
-    if (!ok && mounted) _showSnack('Failed to send stop command');
+    if (!mounted) return;
+    if (!ok) {
+      _showSnack('Failed to send stop command');
+    } else {
+      await _pollStatus();
+    }
   }
 
   void _showSnack(String msg) {
@@ -401,8 +411,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _buildInfoRow('Scan Duration',
                                       '${item['scan_time']?.toStringAsFixed(1)}s'),
                                   if (!isProcessing)
-                                    _buildInfoRow('Severity Level',
-                                        '${item['coverage']?.toStringAsFixed(1)}%'),
+                                    _buildInfoRow(
+                                        relativeDetectionEvidenceLabel,
+                                        relativeDetectionEvidenceText(
+                                            Map<String, dynamic>.from(item))),
                                   if (!isProcessing && !isHealthy) ...[
                                     const SizedBox(height: 6),
                                     const Divider(color: Colors.white10),
@@ -615,41 +627,84 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return ScaleTransition(
       scale: _bannerAnim,
       child: _inspectionFinished
-          ? Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF4ADE80).withOpacity(0.2),
-                    const Color(0xFF3B82F6).withOpacity(0.1),
-                  ],
-                ),
-                border:
-                    Border.all(color: const Color(0xFF4ADE80).withOpacity(0.4)),
-              ),
-              child: const Column(
-                children: [
-                  Text('✅', style: TextStyle(fontSize: 40)),
-                  SizedBox(height: 8),
-                  Text(
-                    'Inspection Complete!',
-                    style: TextStyle(
-                      color: Color(0xFF4ADE80),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Robot has safely returned to the initial point',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
-                  ),
-                ],
-              ),
+          ? MissionTerminalBanner(
+              state: _inspectionState,
+              succeeded: _inspectionSucceeded,
+              failureReason: _failureReason,
             )
           : const SizedBox.shrink(),
+    );
+  }
+}
+
+class MissionTerminalBanner extends StatelessWidget {
+  final String state;
+  final bool succeeded;
+  final String failureReason;
+
+  const MissionTerminalBanner({
+    super.key,
+    required this.state,
+    required this.succeeded,
+    required this.failureReason,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = state == 'COMPLETED' && succeeded;
+    final canceled = state == 'CANCELED';
+    final color = completed
+        ? const Color(0xFF4ADE80)
+        : canceled
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFFEF4444);
+    final icon = completed ? '✅' : (canceled ? '⏹️' : '❌');
+    final title = completed
+        ? 'Inspection Complete!'
+        : canceled
+            ? 'Inspection Canceled'
+            : 'Inspection Failed';
+    final detail = completed
+        ? 'Robot has safely returned and processing completed'
+        : canceled
+            ? 'Robot returned home after the inspection was canceled'
+            : (failureReason.isEmpty
+                ? 'The inspection could not be completed'
+                : failureReason);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.2),
+            const Color(0xFF3B82F6).withOpacity(0.1),
+          ],
+        ),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Column(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 40)),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            detail,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+          ),
+        ],
+      ),
     );
   }
 }

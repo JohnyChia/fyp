@@ -1,0 +1,8 @@
+# Non-ROS Python dependencies used by processing_node for the frozen tree and
+# fruit detectors. ROS and general Python dependencies remain owned by rosdep.
+--index-url https://download.pytorch.org/whl/cu121
+torch==2.5.1+cu121
+torchvision==0.20.1+cu121
+--extra-index-url https://pypi.org/simple
+ultralytics==8.4.54
+fpdf==1.7.2

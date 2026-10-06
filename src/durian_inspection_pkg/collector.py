@@ -56,11 +56,11 @@ class GazeboCollector(Node):
     def __init__(self):
         super().__init__('gazebo_collector')
 
-        self.declare_parameter('output_dir', '/home/johny/durian_ws/experiment/outputs/current_world_gazebo/runs')
+        self.declare_parameter('output_dir', '/home/johny/durian_ws/captured_images/gazebo_collection')
         self.declare_parameter('image_topic', '/camera/image_raw')
         self.declare_parameter('depth_topic', '/camera/depth/image_raw')
         self.declare_parameter('camera_info_topic', '/camera/camera_info')
-        self.declare_parameter('world_path', '/home/johny/durian_ws/experiment/domain_gap/b0/durian_farm_scale_1x.world')
+        self.declare_parameter('world_path', '/home/johny/durian_ws/experiment/durian_farm_scale_1x.world')
         self.declare_parameter('texture_path', '/home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures')
 
         self.declare_parameter('radii', [0.8, 1.1, 1.4])

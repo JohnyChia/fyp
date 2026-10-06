@@ -16,6 +16,7 @@ from cv_bridge import CvBridge
 from geometry_msgs.msg import Point
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
+from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, Image
@@ -53,6 +54,8 @@ class VisionNode(Node):
         self.declare_parameter("odom_frame", "odom")
         self.declare_parameter("map_frame", "map")
         self.declare_parameter("robot_frame", "base_footprint")
+        self.declare_parameter("tf_lookup_timeout_sec", 0.3)
+        self.declare_parameter("tf_latest_fallback_max_age_sec", 1.5)
 
         self.capture_root = os.path.abspath(str(self.get_parameter("capture_root").value))
         self.db_path = os.path.abspath(str(self.get_parameter("database_path").value))
@@ -70,6 +73,8 @@ class VisionNode(Node):
         self.tree_id = None
         self.target_x = None
         self.target_y = None
+        self.viewpoint_id = None
+        self.viewpoint_index = None
         self.capture_active = False
         self.capture_epoch = 0
         self.last_capture_wall = 0.0
@@ -91,6 +96,7 @@ class VisionNode(Node):
         self.create_subscription(Image, "/camera/depth/image_raw", self.depth_callback, sensor_qos, callback_group=callbacks)
         self.create_subscription(Image, "/camera/image_raw", self.image_callback, sensor_qos, callback_group=callbacks)
         self.create_subscription(Point, "/scan_target_tree", self.scan_target_callback, 10, callback_group=callbacks)
+        self.create_subscription(String, "/scan_viewpoint", self.scan_viewpoint_callback, 10, callback_group=callbacks)
         self.create_subscription(Bool, "/scan_active", self.scan_active_callback, 10, callback_group=callbacks)
         self.create_subscription(String, "/inspection_id", self.inspection_id_callback, session_qos, callback_group=callbacks)
         self.get_logger().info(f"Capture-only vision node ready: {self.capture_root}")
@@ -103,7 +109,23 @@ class VisionNode(Node):
         with self.lock:
             self.target_x = float(msg.x)
             self.target_y = float(msg.y)
-            self.tree_id = int(msg.z) if msg.z >= 0 else None
+            new_tree_id = int(msg.z) if msg.z >= 0 else None
+            if new_tree_id != self.tree_id:
+                self.viewpoint_id = None
+                self.viewpoint_index = None
+            self.tree_id = new_tree_id
+
+    def scan_viewpoint_callback(self, msg):
+        try:
+            payload = json.loads(msg.data)
+            viewpoint_id = str(payload["viewpoint_id"])
+            viewpoint_index = int(payload["viewpoint_index"])
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            self.get_logger().error(f"Invalid scan viewpoint metadata: {exc}")
+            return
+        with self.lock:
+            self.viewpoint_id = viewpoint_id
+            self.viewpoint_index = viewpoint_index
 
     def scan_active_callback(self, msg):
         with self.lock:
@@ -118,6 +140,8 @@ class VisionNode(Node):
                 self.get_logger().info(f"CAPTURE START inspection={self.inspection_id} tree={self.tree_id}")
             else:
                 self.get_logger().info(f"CAPTURE STOP tree={self.tree_id} accepted={self.accepted} rejected={self.rejected}")
+                self.viewpoint_id = None
+                self.viewpoint_index = None
 
     def camera_info_callback(self, msg):
         with self.lock:
@@ -134,7 +158,11 @@ class VisionNode(Node):
     def image_callback(self, msg):
         now = time.monotonic()
         with self.lock:
-            if not self.capture_active or self.tree_id is None or self.camera_info is None:
+            if (
+                not self.capture_active or self.tree_id is None
+                or self.viewpoint_id is None or self.viewpoint_index is None
+                or self.camera_info is None
+            ):
                 return
             interval = float(self.get_parameter("capture_interval_sec").value)
             if now - self.last_capture_wall < interval:
@@ -152,6 +180,8 @@ class VisionNode(Node):
                 "target_x": self.target_x,
                 "target_y": self.target_y,
                 "capture_epoch": self.capture_epoch,
+                "viewpoint_id": self.viewpoint_id,
+                "viewpoint_index": self.viewpoint_index,
                 "camera_info": self.camera_info,
                 "depth_stamp": best[1].header.stamp,
             }
@@ -167,15 +197,52 @@ class VisionNode(Node):
                 self.rejected += 1
             self.get_logger().error(f"Capture persistence failed: {exc}")
 
-    def _lookup(self, target, source, stamp):
+    def _lookup_capture_transform(self, target, source, stamp):
+        """Prefer the image timestamp, then allow a bounded stationary fallback."""
+        requested_sec = float(stamp.nanoseconds) * 1e-9
         try:
-            return self.tf_buffer.lookup_transform(target, source, stamp)
-        except Exception as exc:
-            self.get_logger().warning(
-                f"Capture TF unavailable {source}->{target}: {exc}",
-                throttle_duration_sec=2.0,
+            timeout = Duration(
+                seconds=float(self.get_parameter("tf_lookup_timeout_sec").value)
             )
-            return None
+            transform = self.tf_buffer.lookup_transform(target, source, stamp, timeout)
+            return transform, {"mode": "exact", "age_sec": 0.0}
+        except Exception as exact_exc:
+            try:
+                transform = self.tf_buffer.lookup_transform(
+                    target, source, rclpy.time.Time(), timeout
+                )
+                transform_sec = _stamp_seconds(transform.header.stamp)
+                age_sec = abs(requested_sec - transform_sec)
+                maximum_age = float(
+                    self.get_parameter("tf_latest_fallback_max_age_sec").value
+                )
+                if transform_sec <= 0.0 or age_sec > maximum_age:
+                    raise RuntimeError(
+                        f"latest transform age {age_sec:.3f}s exceeds "
+                        f"configured {maximum_age:.3f}s"
+                    )
+                self.get_logger().warning(
+                    "Capture TF used bounded latest fallback "
+                    f"{source}->{target}: age={age_sec:.3f}s",
+                    throttle_duration_sec=2.0,
+                )
+                return transform, {"mode": "bounded_latest", "age_sec": age_sec}
+            except Exception as fallback_exc:
+                self.get_logger().warning(
+                    f"Capture TF unavailable {source}->{target}: exact={exact_exc}; "
+                    f"fallback={fallback_exc}",
+                    throttle_duration_sec=2.0,
+                )
+                return None, {
+                    "mode": "unavailable",
+                    "age_sec": None,
+                    "error": type(fallback_exc).__name__,
+                }
+
+    def _lookup(self, target, source, stamp):
+        """Compatibility wrapper used by focused tests and diagnostics."""
+        transform, _ = self._lookup_capture_transform(target, source, stamp)
+        return transform
 
     def _persist_observation(self, rgb_msg, rgb, depth, context):
         rgb_t = _stamp_seconds(rgb_msg.header.stamp)
@@ -186,19 +253,36 @@ class VisionNode(Node):
         map_frame = str(self.get_parameter("map_frame").value)
         robot_frame = str(self.get_parameter("robot_frame").value)
 
-        transforms = {
-            "odom_from_camera": _transform_dict(self._lookup(odom_frame, camera_frame, stamp)),
-            "odom_from_map": _transform_dict(self._lookup(odom_frame, map_frame, stamp)),
-            "map_from_robot": _transform_dict(self._lookup(map_frame, robot_frame, stamp)),
+        transform_requests = {
+            "odom_from_camera": (odom_frame, camera_frame),
+            "odom_from_map": (odom_frame, map_frame),
+            "map_from_robot": (map_frame, robot_frame),
         }
+        transforms = {}
+        transform_provenance = {}
+        for name, (target, source) in transform_requests.items():
+            transform, provenance = self._lookup_capture_transform(
+                target, source, stamp
+            )
+            transforms[name] = _transform_dict(transform)
+            transform_provenance[name] = provenance
+        missing = [name for name, value in transforms.items() if value is None]
+        if missing:
+            raise RuntimeError(
+                "required capture transform unavailable; observation rejected: "
+                + ",".join(missing)
+            )
         rgb_hash = hashlib.sha256(np.ascontiguousarray(rgb).tobytes()).hexdigest()
         depth_hash = hashlib.sha256(np.ascontiguousarray(depth).tobytes()).hexdigest()
         observation_hash = hashlib.sha256((rgb_hash + depth_hash).encode("ascii")).hexdigest()
         context_material = {
             "tree_id": context["tree_id"],
+            "viewpoint_id": context["viewpoint_id"],
+            "viewpoint_index": context["viewpoint_index"],
             "target_map": {"x": context["target_x"], "y": context["target_y"], "z": 1.2},
             "camera_k": list(context["camera_info"].k),
             "transforms": transforms,
+            "transform_provenance": transform_provenance,
         }
         context_hash = hashlib.sha256(
             json.dumps(context_material, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -215,6 +299,8 @@ class VisionNode(Node):
             "observation_id": observation_id,
             "inspection_id": context["inspection_id"],
             "tree_id": context["tree_id"],
+            "viewpoint_id": context["viewpoint_id"],
+            "viewpoint_index": context["viewpoint_index"],
             "target_map": {"x": context["target_x"], "y": context["target_y"], "z": 1.2},
             "rgb": {"timestamp": rgb_t, "frame_id": rgb_msg.header.frame_id, "encoding": "bgr8", "sha256": rgb_hash},
             "depth": {"timestamp": depth_t, "encoding": str(depth.dtype), "sha256": depth_hash},
@@ -224,6 +310,7 @@ class VisionNode(Node):
                 "d": list(camera.d), "k": list(camera.k), "r": list(camera.r), "p": list(camera.p),
             },
             "transforms": transforms,
+            "transform_provenance": transform_provenance,
             "observation_sha256": observation_hash,
             "context_sha256": context_hash,
         }
@@ -244,11 +331,13 @@ class VisionNode(Node):
         with connect(self.db_path) as conn:
             conn.execute(
                 """INSERT INTO captured_observations (
-                    observation_id, inspection_id, tree_id, rgb_path, depth_path,
+                    observation_id, inspection_id, tree_id, viewpoint_id,
+                    viewpoint_index, rgb_path, depth_path,
                     metadata_path, rgb_sha256, depth_sha256, observation_sha256,
                     context_sha256, rgb_timestamp, depth_timestamp, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CAPTURED')""",
-                (observation_id, context["inspection_id"], context["tree_id"], rgb_path,
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CAPTURED')""",
+                (observation_id, context["inspection_id"], context["tree_id"],
+                 context["viewpoint_id"], context["viewpoint_index"], rgb_path,
                  depth_path, metadata_path, rgb_hash, depth_hash, observation_hash,
                  context_hash, rgb_t, depth_t),
             )

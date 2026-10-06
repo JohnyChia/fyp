@@ -1,7 +1,7 @@
 # FYP Durian Inspection System
 
-Autonomous durian-tree inspection using **ROS 2**, **Gazebo**, RGB-D vision,
-YOLO models, SQLite, and a Flutter monitoring application.
+Autonomous durian-tree inspection using **ROS 2 Humble**, **Gazebo**, RGB-D
+vision, selectable detector backends, SQLite, and a Flutter monitoring app.
 
 The robot discovers and visits each tree, captures synchronized RGB-D evidence,
 returns home, processes the saved observations, and publishes a final disease
@@ -71,11 +71,9 @@ Tree YOLO -> Distance -> Target association -> Tree ROI
 
 ```text
 durian_ws/
-├── models/
-│   └── durian_leaf/              # Six-class leaf checkpoints (Git LFS)
-│       ├── original.pt
-│       ├── baseline.pt
-│       └── advanced.pt
+├── models/leaf_candidates/       # Local checkpoints + lightweight manifests
+├── runtime/                      # Backend setup and verification tools
+├── scripts/                      # Development-safe test/validation helpers
 ├── src/
 │   ├── durian_inspection_pkg/    # ROS 2 inspection package
 │   │   ├── inspection_server.py  # Navigation and inspection controller
@@ -86,17 +84,25 @@ durian_ws/
 │   │   └── map_publisher.py      # Stored map publisher
 │   └── durian_message/           # Custom ROS interfaces
 ├── durian_flutter_app/           # Flutter monitoring application
+├── validate_fyp_development.sh   # Sealed-test-safe readiness validator
 ├── run.sh                        # Build and launch script
 └── README.md
 ```
 
-## Leaf models
+## Leaf detector backends
 
-| Model | Training data | Purpose |
-|---|---|---|
-| `original.pt` | Gazebo images | Original synthetic-domain model |
-| `baseline.pt` | Balanced real and Gazebo images | Domain-gap baseline |
-| `advanced.pt` | Balanced real and Gazebo images | Advanced EfficientNet experiment |
+The backend-neutral worker supports `yolo26n`, `yolo26n_p2`, `rfdetr_n`, and
+`dfine_n`. It normalizes class IDs, confidence, and XYXY boxes before returning
+results to ROS. Framework dependencies are isolated from the ROS environment.
+
+Backend, checkpoint, thresholds, runtime and class identity are selected by a
+validated deployment YAML. A different validated file can be supplied without
+editing ROS source:
+
+```bash
+ros2 launch durian_inspection_pkg navigation_launch.py \
+  leaf_deployment_config:=/absolute/path/to/leaf_detector_deployment.yaml
+```
 
 The checkpoints classify six conditions:
 
@@ -119,7 +125,9 @@ The checkpoints classify six conditions:
 
 ## Clone
 
-Model checkpoints are stored with Git LFS.
+Historical intentionally tracked checkpoints use Git LFS. Current candidate
+checkpoints and formal experiment assets are local-only and are not distributed
+by this public repository.
 
 ```bash
 sudo apt-get update
@@ -147,6 +155,18 @@ source /usr/share/gazebo/setup.sh
 ros2 launch durian_inspection_pkg navigation_launch.py
 ```
 
+## Development validation
+
+```bash
+./validate_fyp_development.sh
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q \
+  src/durian_inspection_pkg/test
+```
+
+Current software status is `DEVELOPMENT_READY_FOR_FINAL_MODEL`. Formal training,
+final model selection, and CUDA-native certification are separate activities;
+this statement does not claim that the formal eight-run study is complete.
+
 ## Runtime outputs
 
 | Output | Description |
@@ -155,13 +175,17 @@ ros2 launch durian_inspection_pkg navigation_launch.py
 | `processed_images/<inspection>/<tree>/` | Annotated inference results |
 | `durian_inspection.db` | Observations and final tree results |
 
-Runtime outputs, build files, databases, and general model files are ignored by
-Git. The following local training and dataset directories are also excluded:
+Runtime outputs, build products, databases, runtime environments, datasets,
+formal packages and local checkpoints are ignored by Git and must remain local:
 
 ```text
 experiment/
 hybrid_datasets/
 external_datasets/
+runtime/leaf_backend_deps/
+runtime/leaf_backend_sources/
+models/leaf_candidates/*_best.pt
+models/leaf_candidates/*_best.pth
 ```
 
 ## Tree status
@@ -172,4 +196,3 @@ processing  -- successful durable result -->  completed
 
 If processing fails, the error is stored in `processing_error` and the tree
 remains `processing`. It is never incorrectly labelled `completed`.
-

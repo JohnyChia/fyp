@@ -1,0 +1,170 @@
+schema_version: 1
+
+leaf_detector:
+  backend: dfine_n
+  profiles:
+    yolo26n:
+      framework: ultralytics
+      checkpoint: /home/johny/durian_ws/models/leaf_candidates/yolo26n_best.pt
+      manifest: /home/johny/durian_ws/models/leaf_candidates/manifests/yolo26n.json
+      confidence:
+        model: 0.15
+        per_class: {}
+      native_resolution: [640, 640]
+      resize_policy: framework_native
+      adapter_version: central-worker-v2-invalid-geometry-filter
+      runtime_options:
+        device_policy: cuda_required
+      launcher:
+        command:
+          - /home/johny/durian_ws/.venv/bin/python
+          - -m
+          - leaf_backend_runtime
+        environment:
+          PYTHONNOUSERSITE: "1"
+        python_path:
+          - /home/johny/durian_ws/src/durian_inspection_pkg
+    yolo26n_p2:
+      framework: ultralytics
+      checkpoint: /home/johny/durian_ws/models/leaf_candidates/yolo26n_p2_best.pt
+      manifest: /home/johny/durian_ws/models/leaf_candidates/manifests/yolo26n_p2.json
+      confidence:
+        model: 0.10
+        per_class: {}
+      native_resolution: [640, 640]
+      resize_policy: framework_native
+      adapter_version: central-worker-v2-invalid-geometry-filter
+      runtime_options:
+        device_policy: cuda_required
+      launcher:
+        command:
+          - /home/johny/durian_ws/.venv/bin/python
+          - -m
+          - leaf_backend_runtime
+        environment:
+          PYTHONNOUSERSITE: "1"
+        python_path:
+          - /home/johny/durian_ws/src/durian_inspection_pkg
+    rfdetr_n:
+      framework: rfdetr
+      checkpoint: /home/johny/durian_ws/models/leaf_candidates/rfdetr_n_best.pth
+      manifest: /home/johny/durian_ws/models/leaf_candidates/manifests/rfdetr_n.json
+      confidence:
+        model: 0.30
+        per_class: {}
+      native_resolution: [384, 384]
+      resize_policy: framework_native
+      adapter_version: central-worker-v2-invalid-geometry-filter
+      runtime_options:
+        device_policy: cuda_required
+      launcher:
+        command:
+          - /home/johny/durian_ws/.venv/bin/python
+          - -m
+          - leaf_backend_runtime
+        environment:
+          PYTHONNOUSERSITE: "1"
+        python_path:
+          - /home/johny/durian_ws/runtime/leaf_backend_deps/rfdetr
+          - /home/johny/durian_ws/src/durian_inspection_pkg
+    dfine_n:
+      framework: dfine
+      checkpoint: /home/johny/durian_ws/models/leaf_candidates/dfine_n_best.pth
+      manifest: /home/johny/durian_ws/models/leaf_candidates/manifests/dfine_n.json
+      confidence:
+        model: 0.25
+        per_class: {}
+      native_resolution: [640, 640]
+      resize_policy: framework_native
+      adapter_version: central-worker-v2-invalid-geometry-filter
+      runtime_options:
+        device_policy: cuda_required
+        expected_source_commit: 956d1709314c2c6a4df6f34de232054578a7449f
+        model_config: configs/dfine/controlled_durian_n.yml
+      launcher:
+        command:
+          - /home/johny/durian_ws/.venv/bin/python
+          - -m
+          - leaf_backend_runtime
+        environment:
+          PYTHONNOUSERSITE: "1"
+        python_path:
+          - /home/johny/durian_ws/runtime/leaf_backend_deps/dfine
+          - /home/johny/durian_ws/runtime/leaf_backend_sources/dfine-956d1709314c2c6a4df6f34de232054578a7449f
+          - /home/johny/durian_ws/src/durian_inspection_pkg
+        working_directory: /home/johny/durian_ws/runtime/leaf_backend_sources/dfine-956d1709314c2c6a4df6f34de232054578a7449f
+  inference:
+    full_roi: true
+    tile_enabled: false
+    tile_size: [320, 320]
+    overlap: 0.25
+  merge:
+    policy: NOT YET ACTIVATED
+    parameters: NOT YET FROZEN
+  deadline:
+    startup_ms: 120000
+    request_ms: 30000
+
+multi_frame:
+  primary_aggregation: TEMPORAL_MULTI_VIEW_SUPPORT_V1
+  minimum_observations: 1
+  temporal_sampling:
+    version: TEMPORAL_MULTI_VIEW_SUPPORT_V1
+    status: FROZEN
+    sampling_interval_sec: 1.0
+    maximum_sampled_frames_per_viewpoint: 10
+    minimum_valid_frames_per_viewpoint: 1
+    viewpoint_weighting: equal_one_vote
+  same_leaf_association:
+    version: rgbd-tree-frame-v1
+    status: UNFROZEN
+    center_patch_radius_px: 2
+    minimum_valid_depth_samples: 3
+    maximum_match_distance_m: 0.12
+    evidence_rule: distinct_view_support_then_mean_confidence
+    aggregation_mode: unique_leaf_count
+  insufficient_evidence_outcome: unknown
+  fallback:
+    enabled: false
+    mode: temporally_sampled_frame_support
+
+experiment_context:
+  version: durian-six-tree-controlled-v1
+  world_path: /home/johny/durian_ws/experiment/durian_farm_scale_1x.world
+
+inspection_policy:
+  version: radial-multiview-v1
+  enabled: true
+  # Navigation validation showed 1.5 m adjacent-view chords reaching the
+  # unchanged 0.8 m watchdog limit. At 1.8 m, the nominal 90-degree chord
+  # clearance is 1.27 m before controller/goal-tolerance error.
+  radius_m: 1.8
+  angular_offsets_deg: [0.0, 90.0, 180.0, 270.0]
+  capture_duration_sec: 10.0
+  navigation_safety:
+    watchdog_min_distance_m: 0.8
+    goal_min_distance_m: 1.0
+    recovery_clearance_m: 1.2
+    max_recovery_attempts_per_leg: 3
+    recovery_linear_speed_mps: 0.2
+    recovery_angular_speed_radps: 0.4
+    recovery_align_tolerance_rad: 0.15
+    recovery_timeout_sec: 12.0
+
+localization_guard:
+  enabled: true
+  source: gazebo_world_odometry
+  global_frame: map
+  odom_frame: odom
+  max_translation_step_m: 0.15
+  max_yaw_step_rad: 0.20
+  max_linear_speed_mps: 0.60
+  max_angular_speed_radps: 2.00
+  stationary_linear_speed_mps: 0.03
+  stationary_angular_speed_radps: 0.05
+  stationary_translation_drift_m: 0.08
+  stationary_yaw_drift_rad: 0.12
+  settling_interval_sec: 1.0
+  settling_timeout_sec: 8.0
+  required_consecutive_good_samples: 5
+  tf_unavailable_timeout_sec: 1.0

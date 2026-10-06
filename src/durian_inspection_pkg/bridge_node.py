@@ -3,6 +3,7 @@ import json
 import rclpy
 import socket
 import os
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from sensor_msgs.msg import Imu
 from aiohttp import web
@@ -100,7 +101,7 @@ async def ws_handler(websocket):
 def main(args=None):
     try:
         asyncio.run(main_async())
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
 
 
@@ -129,6 +130,8 @@ async def main_async():
         while rclpy.ok():
             rclpy.spin_once(bridge, timeout_sec=0.1)
             await asyncio.sleep(0.01)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
     finally:
         print("service closing ...")
         if server is not None:
@@ -136,4 +139,5 @@ async def main_async():
             await server.wait_closed()
         await runner.cleanup()
         bridge.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()

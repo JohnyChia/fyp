@@ -4,7 +4,7 @@ from rclpy.node import Node
 from std_msgs.msg import Bool, Int32, String
 from rclpy.action import ActionClient
 from rclpy.callback_groups import ReentrantCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 
 from geometry_msgs.msg import Twist, PoseStamped, Point, PointStamped
@@ -23,6 +23,7 @@ import time
 import threading
 import sqlite3
 import datetime
+import json
 import struct
 import uuid
 import tf2_ros
@@ -30,13 +31,132 @@ from tf2_ros import LookupException, ConnectivityException, ExtrapolationExcepti
 import tf2_geometry_msgs
 from std_srvs.srv import Trigger
 from observation_store import connect
+from leaf_deployment_config import load_deployment_config
+from multi_view_inspection import (
+    MultiViewPolicy,
+    NavigationSafetyPolicy,
+    recovery_motion_command,
+)
+from localization_stability import (
+    LocalizationGuardPolicy,
+    PoseSample,
+    StationaryStabilityGate,
+    angular_distance,
+    evaluate_pose_continuity,
+)
+
+
+MISSION_STATUS_VERSION = 1
+MISSION_STATES = frozenset({
+    "READY",
+    "INSPECTING",
+    "RETURNING_HOME",
+    "PROCESSING",
+    "COMPLETED",
+    "CANCELED",
+    "FAILED",
+})
+TERMINAL_MISSION_STATES = frozenset({"COMPLETED", "CANCELED", "FAILED"})
+
+
+def navigation_watchdog_violation(distance, minimum_distance):
+    """Return whether navigation entered the tree safety exclusion radius."""
+    return float(distance) < float(minimum_distance)
+
+
+def recovery_completion_state(resume_state, has_locked_target, has_viewpoints):
+    """Resume an interrupted view when its target context is still valid."""
+    if resume_state == "CALCULATE_GOAL" and has_locked_target and has_viewpoints:
+        return "CALCULATE_GOAL"
+    return "FIND_TREE"
+
+
+def inventory_gate_state(tree_count, wait_started, timeout_sec, now=None):
+    """Return ready/waiting/timed_out for the bounded inventory fallback gate."""
+    if tree_count > 0:
+        return "ready"
+    if wait_started is None:
+        return "waiting"
+    current = time.monotonic() if now is None else now
+    return (
+        "timed_out"
+        if current - wait_started >= max(0.0, timeout_sec)
+        else "waiting"
+    )
+
+
+def home_pose_within_tolerance(
+    robot_x, robot_y, robot_yaw, home_x, home_y, home_yaw,
+    position_tolerance=0.5, yaw_tolerance=0.3,
+):
+    """Check the final mapped pose rather than trusting Nav2 success alone."""
+    position_error = math.hypot(robot_x - home_x, robot_y - home_y)
+    yaw_error = (robot_yaw - home_yaw + math.pi) % (2.0 * math.pi) - math.pi
+    return (
+        position_error < position_tolerance
+        and abs(yaw_error) < yaw_tolerance,
+        position_error,
+        abs(yaw_error),
+    )
+
+
+def build_mission_status_payload(
+    state, inspection_id=None, terminal=False, success=False, reason=""
+):
+    """Build the versioned public mission-status contract."""
+    if state not in MISSION_STATES:
+        raise ValueError(f"Unsupported mission state: {state}")
+    if bool(terminal) != (state in TERMINAL_MISSION_STATES):
+        raise ValueError("terminal flag does not match mission state")
+    if bool(success) != (state == "COMPLETED"):
+        raise ValueError("success flag does not match mission state")
+    return {
+        "version": MISSION_STATUS_VERSION,
+        "state": state,
+        "inspection_id": inspection_id or "",
+        "terminal": bool(terminal),
+        "success": bool(success),
+        "reason": reason or "",
+    }
+
+
+def serialize_mission_status(
+    state, inspection_id=None, terminal=False, success=False, reason=""
+):
+    """Serialize mission status deterministically for transition de-duplication."""
+    payload = build_mission_status_payload(
+        state, inspection_id, terminal, success, reason
+    )
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+
+def processing_terminal_status(cancel_requested, processing_succeeded, reason=""):
+    """Map deferred-processing outcome to the authoritative terminal state."""
+    if not processing_succeeded:
+        return "FAILED", True, False, reason or "deferred_processing_failed"
+    if cancel_requested:
+        return "CANCELED", True, False, reason or "cancel_requested"
+    return "COMPLETED", True, True, ""
+
+
+def mission_status_qos():
+    """QoS used by both status publisher and late-joining subscribers."""
+    return QoSProfile(
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        depth=1,
+    )
 
 
 class InspectionServer(Node):
     def __init__(self):
         super().__init__("inspection_server")
-        self.data_lock = threading.Lock()
+        # Several state transitions call helpers which also protect shared state.
+        # RLock is a defensive backstop; normal paths still release the lock
+        # before publishing, cancelling actions, or entering recovery.
+        self.data_lock = threading.RLock()
         self.has_authoritative_trees = False
+        self.tree_inventory_source = "none"
 
         self.cb_group = ReentrantCallbackGroup()
 
@@ -66,12 +186,17 @@ class InspectionServer(Node):
         from std_msgs.msg import Bool, Int32
         self.scan_active_pub = self.create_publisher(Bool, "/scan_active", 10)
         self.scan_target_pub = self.create_publisher(Point, "/scan_target_tree", 10)
+        self.scan_viewpoint_pub = self.create_publisher(String, "/scan_viewpoint", 10)
         inspection_qos = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL,
             depth=1,
         )
         self.inspection_id_pub = self.create_publisher(String, "/inspection_id", inspection_qos)
+        self.inspection_status_pub = self.create_publisher(
+            String, "/inspection_status", mission_status_qos()
+        )
+        self._last_mission_status = None
         self._last_target_pub = 0.0
 
         self.nav_client = ActionClient(
@@ -96,7 +221,7 @@ class InspectionServer(Node):
         self.robot_x, self.robot_y, self.robot_yaw = 0.0, 0.0, 0.0
         self.robot_vx = 0.0
         self.robot_vy = 0.0
-        self.robot_vtheta = 0.0, 0.0, 0.0
+        self.robot_vtheta = 0.0
         self.initial_inspect_x = 0.0
         self.initial_inspect_y = 0.0
 
@@ -114,27 +239,69 @@ class InspectionServer(Node):
         self.global_tree_id = 0
 
         self.declare_parameter('world_path', '')
+        self.declare_parameter('tree_inventory_timeout_sec', 30.0)
+        self.declare_parameter('auto_shutdown_after_completion', False)
+        self.declare_parameter('leaf_deployment_config_path', '')
+        self.declare_parameter('navigation_only_validation', False)
         self.world_path = os.path.expanduser(
             str(self.get_parameter('world_path').value)
         )
+        self.tree_inventory_timeout_sec = max(
+            0.0,
+            float(self.get_parameter('tree_inventory_timeout_sec').value),
+        )
+        self.auto_shutdown_after_completion = bool(
+            self.get_parameter('auto_shutdown_after_completion').value
+        )
+        self.navigation_only_validation = bool(
+            self.get_parameter('navigation_only_validation').value
+        )
+        deployment_config = load_deployment_config(
+            str(self.get_parameter('leaf_deployment_config_path').value)
+        )
+        self.multi_view_policy = MultiViewPolicy.from_mapping(
+            deployment_config['inspection_policy']
+        )
+        self.navigation_safety = NavigationSafetyPolicy.from_mapping(
+            deployment_config['inspection_policy']['navigation_safety']
+        )
+        self.localization_guard = LocalizationGuardPolicy.from_mapping(
+            deployment_config['localization_guard']
+        )
+        self.localization_gate = StationaryStabilityGate(self.localization_guard)
+        self._last_global_pose_sample = None
+        self._last_pose_sample_was_stationary = None
+        self._localization_failure_reason = None
+        self._last_tf_failure_started = None
+        self._scan_pose_anchor = None
+        self._scan_max_translation_drift = 0.0
+        self._scan_max_yaw_drift = 0.0
+        self.current_viewpoints = ()
+        self.current_viewpoint_index = 0
+        self.tree_scan_duration = 0.0
+        self.viewpoint_capture_succeeded = False
+        self._completion_shutdown_scheduled = False
+        self.inventory_wait_started = None
         self.authoritative_trees = []
         self.load_authoritative_trees_from_world()
 
         self.TREE_MATCH_RADIUS = 1.0
         self.COMPLETED_TREE_RADIUS = 1.0
         self.inspection_finished = False
+        self.cancel_requested = False
         self.locked_target_tree = None
 
         self.recovery_step = 0
         self.recovery_start = 0
         self.recovery_escape_angle = 0.0
+        self.recovery_resume_state = "FIND_TREE"
 
         self.home_x, self.home_y, self.home_yaw = 0.0, 0.0, 0.0
 
         self.state = "IDLE"
         self.running = False
         self.nav_retry = 0
-        self.max_retry = 3
+        self.max_retry = self.navigation_safety.max_recovery_attempts_per_leg
 
         self.nav_goal_handle = None
         self.nav_goal_seq = 0
@@ -149,10 +316,122 @@ class InspectionServer(Node):
 
         self.load_trees_from_db()
 
+        self._publish_mission_status("READY")
+
         self.state_thread = threading.Thread(target=self.state_machine_loop, daemon=True)
         self.state_thread.start()
 
         self.get_logger().info("Durian Inspection Server connected.")
+        self.get_logger().info(
+            "LOCALIZATION AUTHORITY: "
+            f"source={self.localization_guard.source} "
+            f"global_frame={self.localization_guard.global_frame} "
+            f"odom_frame={self.localization_guard.odom_frame} "
+            "map_to_odom=static simulation-only"
+        )
+
+    def _publish_mission_status(
+        self, state, terminal=False, success=False, reason=""
+    ):
+        """Publish only when the public mission status meaningfully changes."""
+        serialized = serialize_mission_status(
+            state,
+            self.current_inspection_id,
+            terminal,
+            success,
+            reason,
+        )
+        if serialized == self._last_mission_status:
+            return False
+
+        msg = String()
+        msg.data = serialized
+        self.inspection_status_pub.publish(msg)
+        self._last_mission_status = serialized
+        self.get_logger().info(f"MISSION STATUS: {serialized}")
+        return True
+
+    def _schedule_terminal_shutdown(self, terminal_state):
+        """Exit after any terminal result so launch stops every child process."""
+        if (
+            not self.auto_shutdown_after_completion
+            or self._completion_shutdown_scheduled
+        ):
+            return
+        self._completion_shutdown_scheduled = True
+        if terminal_state == "COMPLETED":
+            self.get_logger().info(
+                "ALL DATA STORED: automatic system shutdown in 2 seconds"
+            )
+        else:
+            self.get_logger().info(
+                f"MISSION {terminal_state}: automatic system shutdown in 2 seconds"
+            )
+
+        def request_shutdown():
+            if rclpy.ok():
+                self.get_logger().info(
+                    f"MISSION {terminal_state}: requesting ROS launch shutdown"
+                )
+                rclpy.shutdown()
+
+        shutdown_timer = threading.Timer(2.0, request_shutdown)
+        shutdown_timer.daemon = True
+        shutdown_timer.start()
+
+    def _schedule_completion_shutdown(self):
+        """Backward-compatible successful-terminal wrapper."""
+        self._schedule_terminal_shutdown("COMPLETED")
+
+    def _mark_incomplete_results_failed(self, reason):
+        """Close only this mission's unfinished result rows without deleting evidence."""
+        if not self.current_inspection_id:
+            return
+        try:
+            with connect(self.db_path) as conn:
+                result_cursor = conn.execute(
+                    """UPDATE inspection_log
+                       SET status='failed', processing_error=?,
+                           completed_at=CURRENT_TIMESTAMP
+                       WHERE inspection_id=? AND status='processing'""",
+                    (str(reason), self.current_inspection_id),
+                )
+                observation_cursor = conn.execute(
+                    """UPDATE captured_observations
+                       SET status='ABORTED_MISSION', processing_error=?
+                       WHERE inspection_id=?
+                         AND status IN ('CAPTURED', 'PROCESSING')""",
+                    (str(reason), self.current_inspection_id),
+                )
+            if result_cursor.rowcount:
+                self.get_logger().warn(
+                    f"Marked {result_cursor.rowcount} unfinished result row(s) failed: {reason}"
+                )
+            if observation_cursor.rowcount:
+                self.get_logger().warn(
+                    f"Marked {observation_cursor.rowcount} unprocessed observation(s) "
+                    f"ABORTED_MISSION: {reason}"
+                )
+        except Exception as exc:
+            self.get_logger().error(
+                f"Could not close unfinished result rows after mission failure: {exc}"
+            )
+
+    def _finish_failed_mission(self, reason):
+        """Publish and persist a fail-closed terminal mission outcome."""
+        self.stop_robot()
+        self.cancel_navigation()
+        with self.data_lock:
+            self.running = False
+            self.inspection_finished = True
+            self.nav_active = False
+            self.nav_result = None
+            self.state = "IDLE"
+        self._mark_incomplete_results_failed(reason)
+        self._publish_mission_status(
+            "FAILED", terminal=True, success=False, reason=reason
+        )
+        self._schedule_terminal_shutdown("FAILED")
 
     def check_nav_server_callback(self):
         if not self.nav_server_connected:
@@ -163,12 +442,23 @@ class InspectionServer(Node):
             else:
                 self.get_logger().warn("Waiting for Nav2 Action Server response...", throttle_duration_sec=10)
 
+    def _fail_no_tree_inventory(self):
+        """Terminate a started mission when all inventory sources stay empty."""
+        self._finish_failed_mission("NO_TREE_INVENTORY")
+        self.get_logger().error(
+            "INSPECTION FAILED: no world, database, or /static_map "
+            "tree inventory before the configured timeout."
+        )
+
     def init_database(self):
         try:
             with connect(self.db_path):
                 pass
         except Exception as e:
-            self.get_logger().error(f"database connected failed : {e}")
+            self.get_logger().error(f"database initialization failed: {e}")
+            raise RuntimeError(
+                f"inspection server cannot start without its evidence database: {e}"
+            ) from e
 
     def load_completed(self):
         try:
@@ -194,6 +484,12 @@ class InspectionServer(Node):
             self.stop_robot()
             self.cancel_navigation()
 
+            self._last_global_pose_sample = None
+            self._last_pose_sample_was_stationary = None
+            self._localization_failure_reason = None
+            self._last_tf_failure_started = None
+            self.localization_gate.reset()
+
             pose_tuple = self.get_robot_pose_in_map()
             retry_count = 0
             while (pose_tuple is None or pose_tuple[0] is None) and retry_count < 20:
@@ -208,12 +504,14 @@ class InspectionServer(Node):
                 return response
 
             rx, ry, map_yaw = pose_tuple
-            inspection_id = f"inspection_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+            prefix = "navigation_validation" if self.navigation_only_validation else "inspection"
+            inspection_id = f"{prefix}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
             with self.data_lock:
                 self.current_inspection_id = inspection_id
                 self.processing_future = None
                 self.inspection_finished = False
+                self.cancel_requested = False
                 self.returning_home = False
                 self.return_home_retry = 0
                 self.home_x, self.home_y, self.home_yaw = rx, ry, map_yaw
@@ -228,10 +526,16 @@ class InspectionServer(Node):
                 self.nav_goal_seq = 0
                 self.nav_active = False
                 self.nav_result = None
+                self.inventory_wait_started = time.monotonic()
+                self.current_viewpoints = ()
+                self.current_viewpoint_index = 0
+                self.tree_scan_duration = 0.0
+                self.viewpoint_capture_succeeded = False
 
             inspection_msg = String()
             inspection_msg.data = inspection_id
             self.inspection_id_pub.publish(inspection_msg)
+            self._publish_mission_status("INSPECTING")
             self.get_logger().info("INSPECTION START")
             self.get_logger().info(f"INSPECTION ID: {inspection_id}")
             self.get_logger().info(f"INITIAL POSE:\nx={self.initial_inspect_x:.2f}\ny={self.initial_inspect_y:.2f}\nyaw={self.home_yaw:.2f}")
@@ -243,6 +547,7 @@ class InspectionServer(Node):
 
             with self.data_lock:
                 self.running = True
+                self.cancel_requested = True
                 self.returning_home = True
                 self.state = "RETURN_HOME"
                 self.nav_result = None
@@ -253,6 +558,9 @@ class InspectionServer(Node):
                 self.current_tree = None
                 self.locked_target_tree = None
 
+            self._publish_mission_status(
+                "RETURNING_HOME", reason="cancel_requested"
+            )
             response.success = True
         else:
             response.success = False
@@ -282,6 +590,10 @@ class InspectionServer(Node):
         if now - self.last_cluster_time < 2.0:
             return
         self.last_cluster_time = now
+
+        with self.data_lock:
+            if self.trees:
+                return
 
         try:
             points = []
@@ -321,68 +633,90 @@ class InspectionServer(Node):
                     self.global_tree_id += 1
 
             with self.data_lock:
-                if len(local_trees) > 0:
-                    if not self.has_authoritative_trees:
-                        self.get_logger().info(
-                            f"Point cloud received ({len(local_trees)} trees). "
-                            f"Keeping DB inspection inventory ({len(self.trees)} trees); "
-                            f"using cloud only for spatial update."
-                        )
-                        self.has_authoritative_trees = True
-
-                for lx, ly, lz, _ in local_trees:
-                    found = False
-                    for i, (tx, ty, tz, tid) in enumerate(self.trees):
-                        if math.hypot(lx - tx, ly - ty) < self.TREE_MATCH_RADIUS:
-                            is_locked = False
-                            if self.locked_target_tree:
-                                l_tx, l_ty, _, l_tid = self.locked_target_tree
-                                if math.hypot(tx - l_tx, ty - l_ty) < 1.0:
-                                    is_locked = True
-                            if not self.has_authoritative_trees and not is_locked:
-                                self.trees[i] = (0.7 * tx + 0.3 * lx, 0.7 * ty + 0.3 * ly, lz, tid)
-                            found = True
-                            break
-                    if not self.has_authoritative_trees and not found:
-                        self.trees.append((lx, ly, lz, self.global_tree_id))
-                        self.global_tree_id += 1
+                if local_trees and not self.trees:
+                    self.trees = list(local_trees)
+                    self.has_authoritative_trees = True
+                    self.tree_inventory_source = "static_map"
 
             self.get_logger().info(f"Detected trees in cloud: {len(local_trees)}, Total known trees: {len(self.trees)}")
         except Exception as e:
             self.get_logger().error(f"Point cloud processing error: {e}")
 
     def get_robot_pose_in_map(self):
+        transform = None
         try:
-            t = self.tf_buffer.lookup_transform(
-                "map", "base_link", rclpy.time.Time()
+            transform = self.tf_buffer.lookup_transform(
+                self.localization_guard.global_frame, "base_footprint", rclpy.time.Time()
             )
-            self._last_rx = t.transform.translation.x
-            self._last_ry = t.transform.translation.y
-            q = t.transform.rotation
-            siny = 2 * (q.w * q.z + q.x * q.y)
-            cosy = 1 - 2 * (q.y * q.y + q.z * q.z)
-            self._last_ryaw = math.atan2(siny, cosy)
-            self._last_tf_success_time = time.time()
-            return self._last_rx, self._last_ry, self._last_ryaw
-        except Exception as e:
-            pass
-        try:
-            t = self.tf_buffer.lookup_transform(
-                "map", "base_footprint", rclpy.time.Time()
+        except Exception as exc:
+            now = time.monotonic()
+            if self._last_tf_failure_started is None:
+                self._last_tf_failure_started = now
+            self.get_logger().warn(
+                f"LOCALIZATION TF unavailable: {exc}", throttle_duration_sec=2.0
             )
-            self._last_rx = t.transform.translation.x
-            self._last_ry = t.transform.translation.y
-            q = t.transform.rotation
-            siny = 2 * (q.w * q.z + q.x * q.y)
-            cosy = 1 - 2 * (q.y * q.y + q.z * q.z)
-            self._last_ryaw = math.atan2(siny, cosy)
-            self._last_tf_success_time = time.time()
-            return self._last_rx, self._last_ry, self._last_ryaw
-        except Exception as e:
-            self.get_logger().warn(f"TF lookup failed: {e}")
-            if hasattr(self, '_last_rx'):
-                return self._last_rx, self._last_ry, getattr(self, '_last_ryaw', 0.0)
+            if (
+                self.running
+                and now - self._last_tf_failure_started
+                >= self.localization_guard.tf_unavailable_timeout_sec
+            ):
+                self._localization_failure_reason = "LOCALIZATION_TF_UNAVAILABLE"
             return None, None, None
+
+        self._last_tf_failure_started = None
+        rx = transform.transform.translation.x
+        ry = transform.transform.translation.y
+        q = transform.transform.rotation
+        siny = 2 * (q.w * q.z + q.x * q.y)
+        cosy = 1 - 2 * (q.y * q.y + q.z * q.z)
+        yaw = math.atan2(siny, cosy)
+        # Pose continuity must use the timestamp of the pose source.  This
+        # node runs with use_sim_time, so comparing Gazebo pose movement to
+        # wall-clock time can falsely classify normal batched simulator
+        # updates as instantaneous jumps when WSL/Gazebo is briefly delayed.
+        stamp = transform.header.stamp
+        source_timestamp = float(stamp.sec) + float(stamp.nanosec) * 1e-9
+        if source_timestamp <= 0.0:
+            source_timestamp = self.get_clock().now().nanoseconds * 1e-9
+        sample = PoseSample(source_timestamp, rx, ry, yaw)
+        linear_speed = math.hypot(self.robot_vx, self.robot_vy)
+        result = evaluate_pose_continuity(
+            self._last_global_pose_sample,
+            sample,
+            linear_speed,
+            self.robot_vtheta,
+            self.localization_guard,
+            self._last_pose_sample_was_stationary,
+        )
+        self.get_logger().debug(
+            "LOCALIZATION SAMPLE: "
+            f"source={self.localization_guard.source} t={sample.timestamp_sec:.3f} "
+            f"x={rx:.3f} y={ry:.3f} yaw={yaw:.3f} "
+            f"delta_translation={result.translation_delta_m:.3f} "
+            f"delta_yaw={result.yaw_delta_rad:.3f} "
+            f"elapsed={result.elapsed_sec:.3f} "
+            f"allowed_translation={result.allowed_translation_m:.3f} "
+            f"allowed_yaw={result.allowed_yaw_rad:.3f} "
+            f"stationary={result.stationary} accepted={result.accepted}"
+        )
+        if not result.accepted:
+            self.get_logger().error(
+                "LOCALIZATION_POSE_JUMP: "
+                f"source={self.localization_guard.source} "
+                f"delta_translation={result.translation_delta_m:.3f}m "
+                f"delta_yaw={result.yaw_delta_rad:.3f}rad "
+                f"elapsed={result.elapsed_sec:.3f}s "
+                f"allowed_translation={result.allowed_translation_m:.3f}m "
+                f"allowed_yaw={result.allowed_yaw_rad:.3f}rad "
+                f"stationary={result.stationary}"
+            )
+            self._localization_failure_reason = result.reason
+            return None, None, None
+        self._last_global_pose_sample = sample
+        self._last_pose_sample_was_stationary = result.stationary
+        self._last_rx, self._last_ry, self._last_ryaw = rx, ry, yaw
+        self._last_tf_success_time = time.monotonic()
+        return rx, ry, yaw
 
     def load_authoritative_trees_from_world(self):
         """Load stable tree IDs and map poses from the active Gazebo world."""
@@ -426,6 +760,8 @@ class InspectionServer(Node):
                 self.authoritative_trees = list(inventory)
                 self.trees = list(inventory)
                 self.has_authoritative_trees = bool(inventory)
+                if inventory:
+                    self.tree_inventory_source = "world"
 
                 if inventory:
                     self.global_tree_id = max(
@@ -490,6 +826,8 @@ class InspectionServer(Node):
             with self.data_lock:
                 if not self.has_authoritative_trees and local_trees:
                     self.trees = local_trees
+                    self.has_authoritative_trees = True
+                    self.tree_inventory_source = "database"
             if local_trees:
                 self.get_logger().info(f"从 DB 预加载了 {len(local_trees)} 棵树（冷启动）")
         except Exception as e:
@@ -567,13 +905,39 @@ class InspectionServer(Node):
                 time.sleep(0.2)
                 continue
 
+            # Sample continuously, including while an asynchronous Nav2 goal
+            # is active. This prevents a legitimate full navigation leg from
+            # appearing as one stationary pose step at arrival and ensures TF
+            # loss/jumps are detected during motion rather than at the next
+            # state transition.
+            self.get_robot_pose_in_map()
+
+            if self._localization_failure_reason:
+                reason = self._localization_failure_reason
+                self.get_logger().error(
+                    f"MISSION FAIL-CLOSED: localization guard reason={reason}"
+                )
+                self._finish_failed_mission(reason)
+                continue
+
             if current_state != last_logged_state:
                 self.get_logger().info(f"State transition: {last_logged_state} → {current_state}")
                 last_logged_state = current_state
 
             if current_state == "FIND_TREE":
-                if getattr(self, 'last_cluster_time', 0.0) == 0.0:
+                with self.data_lock:
+                    tree_count = len(self.trees)
+                    wait_started = self.inventory_wait_started
+                gate_state = inventory_gate_state(
+                    tree_count,
+                    wait_started,
+                    self.tree_inventory_timeout_sec,
+                )
+                if gate_state == "waiting":
                     time.sleep(0.5)
+                    continue
+                if gate_state == "timed_out":
+                    self._fail_no_tree_inventory()
                     continue
                 tree, dist = self.find_nearest_tree()
                 with self.data_lock:
@@ -587,9 +951,16 @@ class InspectionServer(Node):
                             self.get_logger().info("ALL TREES COMPLETED")
                             self.returning_home = True
                             self.state = "RETURN_HOME"
+                            self._publish_mission_status("RETURNING_HOME")
                     else:
                         self.current_tree = tree
                         self.locked_target_tree = tree
+                        self.current_viewpoints = self.multi_view_policy.viewpoints(
+                            tree[0], tree[1]
+                        )
+                        self.current_viewpoint_index = 0
+                        self.tree_scan_duration = 0.0
+                        self.viewpoint_capture_succeeded = False
                         self.nav_retry = 0
                         self.state = "CALCULATE_GOAL"
                         if not self.completed_trees:
@@ -611,30 +982,38 @@ class InspectionServer(Node):
                 rx, ry, _ = pose_tuple
 
                 actual_dist = math.hypot(tx - rx, ty - ry)
-                INSPECTION_DISTANCE = 1.5
-                MINIMUM_SAFE_DISTANCE = 1.0
+                minimum_safe_distance = self.navigation_safety.goal_min_distance_m
 
-                if actual_dist < MINIMUM_SAFE_DISTANCE:
-                    self.get_logger().warn(f"EMERGENCY: Robot too close to tree! dist={actual_dist:.2f} < {MINIMUM_SAFE_DISTANCE}. Triggering recovery.")
-                    with self.data_lock:
-                        self.state = "RECOVERY"
-                        self.recovery_step = 0
-                        self.recovery_start = time.time()
-                        self.recovery_escape_angle = math.atan2(ry - ty, rx - tx)
+                if actual_dist < minimum_safe_distance:
+                    self.get_logger().warn(
+                        "EMERGENCY: Robot too close to tree! "
+                        f"dist={actual_dist:.2f} < {minimum_safe_distance:.2f}. "
+                        "Triggering bounded recovery."
+                    )
+                    self.navigation_recovery(resume_state="CALCULATE_GOAL")
                     continue
 
-                dx = tx - rx
-                dy = ty - ry
-                gx = tx - (dx / actual_dist) * INSPECTION_DISTANCE
-                gy = ty - (dy / actual_dist) * INSPECTION_DISTANCE
-
-                theta = math.atan2(ty - ry, tx - rx)
+                if not self.current_viewpoints:
+                    raise RuntimeError("multi-view policy produced no viewpoints")
+                viewpoint = self.current_viewpoints[self.current_viewpoint_index]
+                gx, gy, theta = viewpoint.x, viewpoint.y, viewpoint.yaw
+                self.get_logger().info(
+                    "NAVIGATION LEG: "
+                    f"tree_id={tid} viewpoint_id={viewpoint.viewpoint_id} "
+                    f"current_pose=({rx:.3f},{ry:.3f}) "
+                    f"goal_pose=({gx:.3f},{gy:.3f},{theta:.3f}) "
+                    f"goal_distance={math.hypot(gx-rx, gy-ry):.3f} "
+                    f"localization_source={self.localization_guard.source} "
+                    f"global_frame={self.localization_guard.global_frame} "
+                    f"recovery_count={self.nav_retry} localization_guard=good"
+                )
 
                 with self.data_lock:
                     self.nav_debug = {
                         'tree_x': tx, 'tree_y': ty,
                         'start_x': rx, 'start_y': ry, 'start_yaw': self.robot_yaw,
-                        'goal_x': gx, 'goal_y': gy, 'stop_dist': INSPECTION_DISTANCE
+                        'goal_x': gx, 'goal_y': gy,
+                        'stop_dist': self.multi_view_policy.radius_m,
                     }
                     self.nav_debug_written = False
 
@@ -662,25 +1041,42 @@ class InspectionServer(Node):
                     self.get_logger().info(f"NAVIGATION START:\nx={self.goal_pose.pose.position.x:.2f}\ny={self.goal_pose.pose.position.y:.2f}")
                     self.send_nav_goal()
 
+                watchdog_distance = None
                 if nav_active:
                     with self.data_lock:
                         if self.locked_target_tree:
                             tx, ty, _, _ = self.locked_target_tree
-                            dist = math.hypot(tx - self.robot_x, ty - self.robot_y)
-                            if dist < 0.8:
-                                self.get_logger().error(f"EMERGENCY WATCHDOG: dist={dist:.2f} < 0.8m. Canceling Nav2 goal.")
-                                self.navigation_recovery()
-                                continue
+                            watchdog_distance = math.hypot(
+                                tx - self.robot_x, ty - self.robot_y
+                            )
+                if (
+                    watchdog_distance is not None
+                    and navigation_watchdog_violation(
+                        watchdog_distance,
+                        self.navigation_safety.watchdog_min_distance_m,
+                    )
+                ):
+                    self.get_logger().error(
+                        "EMERGENCY WATCHDOG: "
+                        f"dist={watchdog_distance:.2f} < "
+                        f"{self.navigation_safety.watchdog_min_distance_m:.2f}m. "
+                        "Canceling Nav2 goal."
+                    )
+                    self.navigation_recovery(resume_state="CALCULATE_GOAL")
+                    continue
 
                 if nav_active and nav_start_time and (time.time() - nav_start_time > self.nav_timeout):
-                    self.navigation_recovery()
+                    self.navigation_recovery(resume_state="CALCULATE_GOAL")
 
                 if nav_result in ["failed", "rejected", "canceled"]:
                     self.get_logger().info(f"NAVIGATION RESULT:\nsuccess=False")
-                    self.navigation_recovery()
+                    self.navigation_recovery(resume_state="CALCULATE_GOAL")
                 elif nav_result == "success":
                     self.get_logger().info(f"NAVIGATION RESULT:\nsuccess=True")
                     with self.data_lock:
+                        # The retry budget applies to one navigation leg. A
+                        # successful leg must not penalize the next viewpoint.
+                        self.nav_retry = 0
                         self.nav_result = None
                         self.state = "VERIFY_STOP"
                         self.verify_timer = time.time()
@@ -711,15 +1107,20 @@ class InspectionServer(Node):
                     tx, ty, _, tid = self.locked_target_tree
 
                 actual_dist = math.hypot(tx - rx, ty - ry)
-                if actual_dist < 1.0:
-                    self.get_logger().error(f"VERIFY_SAFE_DISTANCE FAILED: dist={actual_dist:.2f} < 1.0m. Triggering recovery.")
-                    with self.data_lock:
-                        self.state = "RECOVERY"
-                        self.recovery_step = 0
-                        self.recovery_start = time.time()
-                        self.recovery_escape_angle = math.atan2(ry - ty, rx - tx)
+                minimum_safe_distance = self.navigation_safety.goal_min_distance_m
+                if actual_dist < minimum_safe_distance:
+                    self.get_logger().error(
+                        "VERIFY_SAFE_DISTANCE FAILED: "
+                        f"dist={actual_dist:.2f} < {minimum_safe_distance:.2f}m. "
+                        "Triggering bounded recovery."
+                    )
+                    self.navigation_recovery(resume_state="CALCULATE_GOAL")
                 else:
-                    self.get_logger().info(f"VERIFY_SAFE_DISTANCE SUCCESS: dist={actual_dist:.2f} >= 1.0m. Proceeding to ALIGNING.")
+                    self.get_logger().info(
+                        "VERIFY_SAFE_DISTANCE SUCCESS: "
+                        f"dist={actual_dist:.2f} >= {minimum_safe_distance:.2f}m. "
+                        "Proceeding to ALIGNING."
+                    )
                     with self.data_lock:
                         self.state = "ALIGNING"
             elif current_state == "ALIGNING":
@@ -734,7 +1135,7 @@ class InspectionServer(Node):
                     time.sleep(0.1)
                     continue
 
-                if time.time() - getattr(self, '_last_tf_success_time', 0.0) > 2.0:
+                if time.monotonic() - getattr(self, '_last_tf_success_time', 0.0) > self.localization_guard.tf_unavailable_timeout_sec:
                     self.get_logger().error("TF STALE for > 2.0s in ALIGNING! Aborting.")
                     self.stop_robot()
                     with self.data_lock:
@@ -773,25 +1174,52 @@ class InspectionServer(Node):
                     tx, ty, _, tid = self.locked_target_tree
 
                 actual_dist = math.hypot(tx - rx, ty - ry)
-                if actual_dist < 1.0:
-                    self.get_logger().error(f"VERIFY_SAFE_DISTANCE_AGAIN FAILED: dist={actual_dist:.2f} < 1.0m after rotation. Triggering recovery.")
-                    with self.data_lock:
-                        self.state = "RECOVERY"
-                        self.recovery_step = 0
-                        self.recovery_start = time.time()
-                        self.recovery_escape_angle = math.atan2(ry - ty, rx - tx)
+                minimum_safe_distance = self.navigation_safety.goal_min_distance_m
+                if actual_dist < minimum_safe_distance:
+                    self.get_logger().error(
+                        "VERIFY_SAFE_DISTANCE_AGAIN FAILED: "
+                        f"dist={actual_dist:.2f} < {minimum_safe_distance:.2f}m "
+                        "after rotation. Triggering bounded recovery."
+                    )
+                    self.navigation_recovery(resume_state="CALCULATE_GOAL")
                 else:
-                    self.get_logger().info(f"VERIFY_SAFE_DISTANCE_AGAIN SUCCESS: dist={actual_dist:.2f} >= 1.0m. Proceeding to SCANNING.")
+                    self.get_logger().info(
+                        "VERIFY_SAFE_DISTANCE_AGAIN SUCCESS: "
+                        f"dist={actual_dist:.2f} >= {minimum_safe_distance:.2f}m. "
+                        "Proceeding to localization settling."
+                    )
                     with self.data_lock:
                         self._cached_tree_res = None
+                        self.viewpoint_capture_succeeded = False
+                        self.localization_gate.reset()
+                        self.localization_settle_started = time.monotonic()
+                        self.state = "LOCALIZATION_SETTLE"
+
+            elif current_state == "LOCALIZATION_SETTLE":
+                self.stop_robot()
+                pose_tuple = self.get_robot_pose_in_map()
+                if pose_tuple is None or pose_tuple[0] is None:
+                    time.sleep(0.1)
+                    continue
+                sample = self._last_global_pose_sample
+                if self.localization_gate.observe(
+                    sample,
+                    math.hypot(self.robot_vx, self.robot_vy),
+                    self.robot_vtheta,
+                ):
+                    rx, ry, ryaw = pose_tuple
+                    with self.data_lock:
+                        if not self.locked_target_tree:
+                            self.state = "FIND_TREE"
+                            continue
+                        tx, ty, _, tid = self.locked_target_tree
                         self.scanning = True
                         self.total_rotated_angle = 0.0
-                        self.scan_start_time = time.time()
+                        self.scan_start_time = time.monotonic()
+                        self._scan_pose_anchor = sample
+                        self._scan_max_translation_drift = 0.0
+                        self._scan_max_yaw_drift = 0.0
                         self.state = "SCANNING"
-                        self.scan_debug_start = {
-                            'x': self.robot_x, 'y': self.robot_y, 'yaw': self.robot_yaw,
-                            'tx': tx, 'ty': ty, 'tid': tid
-                        }
 
                     target_msg = Point()
                     target_msg.x = float(tx)
@@ -799,17 +1227,55 @@ class InspectionServer(Node):
                     target_msg.z = float(tid)
                     self.scan_target_pub.publish(target_msg)
 
+                    viewpoint = self.current_viewpoints[self.current_viewpoint_index]
+                    viewpoint_msg = String()
+                    viewpoint_msg.data = json.dumps({
+                        "viewpoint_id": viewpoint.viewpoint_id,
+                        "viewpoint_index": viewpoint.index,
+                        "camera_goal_pose": {
+                            "x": viewpoint.x,
+                            "y": viewpoint.y,
+                            "yaw": viewpoint.yaw,
+                        },
+                        "target_tree": {"id": int(tid), "x": float(tx), "y": float(ty)},
+                    }, sort_keys=True, separators=(",", ":"))
+                    self.scan_viewpoint_pub.publish(viewpoint_msg)
+
                     msg = Bool()
                     msg.data = True
                     self.scan_active_pub.publish(msg)
 
-                    self.get_logger().info(f"SCAN START:\ntree_id={tid}")
+                    self.get_logger().info(
+                        f"SCAN START:\ntree_id={tid}\n"
+                        f"viewpoint_id={viewpoint.viewpoint_id}\n"
+                        f"viewpoint_index={viewpoint.index}\n"
+                        f"pose=({rx:.3f},{ry:.3f},{ryaw:.3f})\n"
+                        "stationary=true localization_guard=stable"
+                    )
+                elif (
+                    time.monotonic() - self.localization_settle_started
+                    >= self.localization_guard.settling_timeout_sec
+                ):
+                    self._localization_failure_reason = "LOCALIZATION_NOT_STABLE"
+                time.sleep(0.1)
             elif current_state == "SCANNING":
                 self.stop_robot()
 
-                self.get_robot_pose_in_map()
+                pose_tuple = self.get_robot_pose_in_map()
+                if pose_tuple is not None and pose_tuple[0] is not None and self._scan_pose_anchor:
+                    rx, ry, ryaw = pose_tuple
+                    drift = math.hypot(rx - self._scan_pose_anchor.x, ry - self._scan_pose_anchor.y)
+                    yaw_drift = angular_distance(self._scan_pose_anchor.yaw, ryaw)
+                    self._scan_max_translation_drift = max(self._scan_max_translation_drift, drift)
+                    self._scan_max_yaw_drift = max(self._scan_max_yaw_drift, yaw_drift)
+                    if (
+                        drift > self.localization_guard.stationary_translation_drift_m
+                        or yaw_drift > self.localization_guard.stationary_yaw_drift_rad
+                    ):
+                        self._localization_failure_reason = "LOCALIZATION_POSE_JUMP"
+                        continue
 
-                if time.time() - getattr(self, '_last_tf_success_time', 0.0) > 2.0:
+                if time.monotonic() - getattr(self, '_last_tf_success_time', 0.0) > self.localization_guard.tf_unavailable_timeout_sec:
                     self.get_logger().error("TF STALE for > 2.0s during SCANNING! Aborting.")
                     _sa_msg = Bool()
                     _sa_msg.data = False
@@ -820,10 +1286,14 @@ class InspectionServer(Node):
                     time.sleep(0.05)
                     continue
 
-                scan_time_elapsed = time.time() - self.scan_start_time if getattr(self, 'scan_start_time', None) else 0.0
+                scan_time_elapsed = time.monotonic() - self.scan_start_time if getattr(self, 'scan_start_time', None) else 0.0
 
-                if scan_time_elapsed > 10.0:
-                    self.get_logger().info("SCAN_COMPLETE: 10 seconds stationary scan finished.")
+                if scan_time_elapsed > self.multi_view_policy.capture_duration_sec:
+                    self.get_logger().info(
+                        "SCAN_COMPLETE: configured stationary viewpoint capture finished. "
+                        f"pose_drift={self._scan_max_translation_drift:.3f}m "
+                        f"yaw_drift={self._scan_max_yaw_drift:.3f}rad"
+                    )
 
                     _sa_msg = Bool()
                     _sa_msg.data = False
@@ -832,6 +1302,8 @@ class InspectionServer(Node):
                     with self.data_lock:
                         self.scanning = False
                         self.scan_duration = scan_time_elapsed
+                        self.tree_scan_duration += scan_time_elapsed
+                        self.viewpoint_capture_succeeded = True
                         self.state = "SAVE_RESULT"
 
                 time.sleep(0.1)
@@ -839,12 +1311,37 @@ class InspectionServer(Node):
                 with self.data_lock:
                     tree = self.locked_target_tree
                     nav_retry = self.nav_retry
-                    scan_duration = self.scan_duration
+                    scan_duration = self.tree_scan_duration
 
                 pose_tuple = self.get_robot_pose_in_map()
 
                 if tree:
                     tx, ty, _, tid = tree
+                    if not self.viewpoint_capture_succeeded:
+                        self.get_logger().error(
+                            f"VIEWPOINT FAILED: tree_id={tid} "
+                            f"index={self.current_viewpoint_index}; tree not completed"
+                        )
+                        self._finish_failed_mission(
+                            "required_viewpoint_capture_failed"
+                        )
+                        time.sleep(0.05)
+                        continue
+                    viewpoint = self.current_viewpoints[self.current_viewpoint_index]
+                    self.get_logger().info(
+                        f"VIEWPOINT COMPLETE: tree_id={tid} "
+                        f"viewpoint_id={viewpoint.viewpoint_id} "
+                        f"index={viewpoint.index}"
+                    )
+                    if self.current_viewpoint_index + 1 < len(self.current_viewpoints):
+                        with self.data_lock:
+                            self.current_viewpoint_index += 1
+                            self.viewpoint_capture_succeeded = False
+                            self.nav_result = None
+                            self.nav_active = False
+                            self.state = "CALCULATE_GOAL"
+                        time.sleep(0.05)
+                        continue
 
                     if (
                         pose_tuple is not None
@@ -862,6 +1359,27 @@ class InspectionServer(Node):
                             "SAVE_RESULT: valid map pose unavailable; "
                             "inspection_log.distance will be NULL"
                         )
+
+                    if self.navigation_only_validation:
+                        self.get_logger().info(
+                            f"NAVIGATION VALIDATION TREE COMPLETE: tree_id={tid} "
+                            f"views={len(self.current_viewpoints)}; no DB result written"
+                        )
+                        with self.data_lock:
+                            if not any(
+                                math.hypot(tx - dx, ty - dy) < self.COMPLETED_TREE_RADIUS
+                                for dx, dy in self.completed_trees
+                            ):
+                                self.completed_trees.append((tx, ty))
+                            self.locked_target_tree = None
+                            self.current_tree = None
+                            self.current_viewpoints = ()
+                            self.current_viewpoint_index = 0
+                            self.tree_scan_duration = 0.0
+                            self.viewpoint_capture_succeeded = False
+                            self.state = "FIND_TREE"
+                        time.sleep(0.05)
+                        continue
 
                     disease_name = None
                     coverage = 0.0
@@ -915,6 +1433,10 @@ class InspectionServer(Node):
                         self.get_logger().info("TARGET UNLOCKED")
                         self.locked_target_tree = None
                         self.current_tree = None
+                        self.current_viewpoints = ()
+                        self.current_viewpoint_index = 0
+                        self.tree_scan_duration = 0.0
+                        self.viewpoint_capture_succeeded = False
                         self.get_logger().info("NEXT TREE")
                         self.state = "FIND_TREE"
                 time.sleep(0.05)
@@ -955,31 +1477,51 @@ class InspectionServer(Node):
                         time.sleep(1.0)
                     else:
                         self.get_logger().error("RETURN HOME FAILED: Navigation failed after 3 attempts.")
-                        with self.data_lock:
-                            self.running = False
-                            self.inspection_finished = True
-                            self.state = "IDLE"
+                        self._finish_failed_mission(
+                            "return_home_navigation_failed"
+                        )
                 elif nav_result == "success":
                     pose_tuple = self.get_robot_pose_in_map()
                     if pose_tuple and pose_tuple[0] is not None:
                         rx, ry, ryaw = pose_tuple
-                        pos_err = math.hypot(rx - self.home_x, ry - self.home_y)
-                        yaw_err = ryaw - self.home_yaw
-                        while yaw_err > math.pi: yaw_err -= 2*math.pi
-                        while yaw_err < -math.pi: yaw_err += 2*math.pi
+                        in_tolerance, pos_err, yaw_err = home_pose_within_tolerance(
+                            rx, ry, ryaw,
+                            self.home_x, self.home_y, self.home_yaw,
+                        )
 
-                        if pos_err < 0.5 and abs(yaw_err) < 0.3:
-                            self.get_logger().info(f"RETURN HOME SUCCESS (pos_err={pos_err:.2f}m, yaw_err={abs(yaw_err):.2f}rad)")
-                            self.get_logger().info("CAPTURE COMPLETE; DEFERRED PROCESSING NEXT")
+                        if in_tolerance:
+                            self.get_logger().info(f"RETURN HOME SUCCESS (pos_err={pos_err:.2f}m, yaw_err={yaw_err:.2f}rad)")
+                            if self.navigation_only_validation:
+                                self.get_logger().info(
+                                    "NAVIGATION-ONLY VALIDATION COMPLETE: all trees, "
+                                    "viewpoints, and return home passed"
+                                )
+                            else:
+                                self.get_logger().info("CAPTURE COMPLETE; DEFERRED PROCESSING NEXT")
                         else:
-                            self.get_logger().error(f"RETURN HOME FAILED: Nav succeeded but robot is out of tolerance! (pos_err={pos_err:.2f}m, yaw_err={abs(yaw_err):.2f}rad)")
+                            self.get_logger().error(f"RETURN HOME FAILED: Nav succeeded but robot is out of tolerance! (pos_err={pos_err:.2f}m, yaw_err={yaw_err:.2f}rad)")
                     else:
+                        in_tolerance = False
                         self.get_logger().error("RETURN HOME FAILED: Could not fetch final TF.")
 
                     with self.data_lock:
-                        self.nav_result = None
                         self.nav_active = False
-                        self.state = "TRIGGER_PROCESSING"
+                        if in_tolerance:
+                            self.nav_result = None
+                            if self.navigation_only_validation:
+                                self.running = False
+                                self.inspection_finished = True
+                                self.state = "IDLE"
+                            else:
+                                self.state = "TRIGGER_PROCESSING"
+                        else:
+                            # Feed the existing bounded return-home retry path.
+                            self.nav_result = "failed"
+                    if in_tolerance and self.navigation_only_validation:
+                        self._publish_mission_status(
+                            "COMPLETED", terminal=True, success=True
+                        )
+                        self._schedule_terminal_shutdown("COMPLETED")
                 time.sleep(0.1)
             elif current_state == "TRIGGER_PROCESSING":
                 if not self.processing_client.wait_for_service(timeout_sec=1.0):
@@ -994,50 +1536,88 @@ class InspectionServer(Node):
                         self.get_logger().info("ROBOT HOME: starting deferred processing")
                         self.processing_future = self.processing_client.call_async(Trigger.Request())
                     self.state = "WAIT_PROCESSING"
+                self._publish_mission_status("PROCESSING")
             elif current_state == "WAIT_PROCESSING":
                 with self.data_lock:
                     future = self.processing_future
                 if future is None or not future.done():
                     time.sleep(0.2)
                     continue
+                processing_succeeded = False
+                failure_reason = ""
                 try:
                     result = future.result()
                     if result is None or not result.success:
                         message = result.message if result is not None else "no response"
                         self.get_logger().error(f"DEFERRED PROCESSING FAILED: {message}")
+                        failure_reason = message
                     else:
                         self.get_logger().info(f"DEFERRED PROCESSING COMPLETE: {result.message}")
+                        processing_succeeded = True
                 except Exception as exc:
                     self.get_logger().error(f"DEFERRED PROCESSING SERVICE ERROR: {exc}")
+                    failure_reason = str(exc)
                 with self.data_lock:
+                    cancel_requested = self.cancel_requested
                     self.running = False
                     self.inspection_finished = True
                     self.processing_future = None
                     self.state = "IDLE"
+                terminal_state = processing_terminal_status(
+                    cancel_requested, processing_succeeded, failure_reason
+                )
+                self._publish_mission_status(
+                    terminal_state[0],
+                    terminal=terminal_state[1],
+                    success=terminal_state[2],
+                    reason=terminal_state[3],
+                )
+                if terminal_state[0] == "FAILED":
+                    self._mark_incomplete_results_failed(terminal_state[3])
+                self._schedule_terminal_shutdown(terminal_state[0])
                 time.sleep(0.1)
             elif current_state == "RECOVERY":
                 with self.data_lock:
-                    step = self.recovery_step
                     start = self.recovery_start
-                if step == 0:
-                    self.get_logger().info("RECOVERY: Backing up")
-                    t = Twist()
-                    t.linear.x = -0.2
-                    self.cmd_pub.publish(t)
-                    if time.time() - start > 2.0:
-                        self.stop_robot()
-                        with self.data_lock:
-                            self.recovery_step = 1
-                            self.recovery_start = time.time()
-                elif step == 1:
-                    self.get_logger().info("RECOVERY: Rotating")
-                    t = Twist()
-                    t.angular.z = 0.4
-                    self.cmd_pub.publish(t)
-                    if time.time() - start > 2.5:
-                        self.stop_robot()
-                        with self.data_lock:
-                            self.state = "FIND_TREE"
+                    target = self.locked_target_tree
+                    resume_state = self.recovery_resume_state
+                pose_tuple = self.get_robot_pose_in_map()
+                if target is None or pose_tuple is None or pose_tuple[0] is None:
+                    self.stop_robot()
+                    with self.data_lock:
+                        self.state = "FIND_TREE"
+                    time.sleep(0.1)
+                    continue
+
+                rx, ry, ryaw = pose_tuple
+                tx, ty, _, _ = target
+                linear, angular, clearance_reached = recovery_motion_command(
+                    rx, ry, ryaw, tx, ty, self.navigation_safety
+                )
+                if clearance_reached:
+                    self.stop_robot()
+                    with self.data_lock:
+                        self.state = recovery_completion_state(
+                            resume_state,
+                            self.locked_target_tree is not None,
+                            bool(self.current_viewpoints),
+                        )
+                        resumed_state = self.state
+                    self.get_logger().info(
+                        "RECOVERY COMPLETE: safe clearance reached; resuming state="
+                        f"{resumed_state} viewpoint_index={self.current_viewpoint_index}"
+                    )
+                elif time.time() - start >= self.navigation_safety.recovery_timeout_sec:
+                    self.get_logger().error(
+                        "RECOVERY TIMEOUT: safe clearance not reached; "
+                        "consuming another bounded attempt"
+                    )
+                    self.navigation_recovery(resume_state=resume_state)
+                else:
+                    command = Twist()
+                    command.linear.x = linear
+                    command.angular.z = angular
+                    self.cmd_pub.publish(command)
                 time.sleep(0.1)
             else:
                 time.sleep(0.1)
@@ -1116,7 +1696,7 @@ class InspectionServer(Node):
                 self.nav_active = False
                 self.nav_result = None
 
-    def navigation_recovery(self):
+    def navigation_recovery(self, resume_state="CALCULATE_GOAL"):
         self.stop_robot()
         self.cancel_navigation()
 
@@ -1124,30 +1704,47 @@ class InspectionServer(Node):
             self.nav_retry += 1
             self.get_logger().warn(f"Starting smart vector recovery attempt {self.nav_retry}")
 
-            if self.current_tree:
+            if self.nav_retry > self.max_retry:
+                exhausted = True
+            else:
+                exhausted = False
+
+            if not exhausted and self.current_tree:
                 tx, ty, _, _ = self.current_tree
                 rx, ry = self.robot_x, self.robot_y
                 self.recovery_escape_angle = math.atan2(ry - ty, rx - tx)
-            else:
+            elif not exhausted:
                 self.recovery_escape_angle = self.robot_yaw + math.pi
 
-            self.recovery_step = 0
-            self.recovery_start = time.time()
-            self.nav_active = False
-            self.nav_result = None
-            self.state = "RECOVERY"
+            if not exhausted:
+                self.recovery_step = 0
+                self.recovery_start = time.time()
+                self.recovery_resume_state = resume_state
+                self.nav_active = False
+                self.nav_result = None
+                self.state = "RECOVERY"
+
+        if exhausted:
+            self.get_logger().error(
+                f"NAVIGATION FAILED: recovery attempts exceeded {self.max_retry}"
+            )
+            self._finish_failed_mission("navigation_retry_exhausted")
 
     def cancel_navigation(self):
         with self.data_lock:
             goal_handle = self.nav_goal_handle
+            # Invalidate every callback belonging to the canceled goal. Without
+            # this, a late success/cancel result can overwrite recovery state.
+            self.nav_goal_seq += 1
+            self.nav_goal_handle = None
+            self.nav_active = False
+            self.nav_result = None
         if goal_handle:
             try:
                 goal_handle.cancel_goal_async()
                 self.get_logger().info("Nav2 task cancellation request sent")
             except Exception as e:
                 self.get_logger().error(f"Exception when cancelling navigation: {e}")
-        with self.data_lock:
-            self.nav_active = False
 
     def align_to_target(self):
         with self.data_lock:
@@ -1156,14 +1753,10 @@ class InspectionServer(Node):
             rx, ry, ryaw = self.robot_x, self.robot_y, self.robot_yaw
 
         dist = math.hypot(tx - rx, ty - ry)
-        if dist < 0.8:
+        if dist < self.navigation_safety.watchdog_min_distance_m:
             self.get_logger().error(f"Safety violation: Distance to tree {dist:.2f}m is unsafe during ALIGN. Aborting alignment!")
             self.stop_robot()
-            with self.data_lock:
-                self.state = "RECOVERY"
-                self.recovery_step = 0
-                self.recovery_start = time.time()
-                self.recovery_escape_angle = math.atan2(ry - ty, rx - tx)
+            self.navigation_recovery(resume_state="CALCULATE_GOAL")
             return False
 
         target_yaw = math.atan2(ty - ry, tx - rx)
@@ -1244,7 +1837,7 @@ def main(args=None):
     executor.add_node(node)
     try:
         executor.spin()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
         node.destroy_node()
