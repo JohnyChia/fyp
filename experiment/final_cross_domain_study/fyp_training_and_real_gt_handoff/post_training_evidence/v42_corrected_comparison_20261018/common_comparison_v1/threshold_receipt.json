@@ -1,0 +1,50 @@
+{
+  "ground_truth_sha256": "9c3af6d86b305d8317d359b07d558cb47fe257dcfdef6de325905b28b638e69d",
+  "real_predictions_or_metrics_accessed": false,
+  "selections": [
+    {
+      "checkpoint_sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+      "prediction_sha256": "f5691c2e628295d76255343f7c61e09482769a3b4bfab34281f1dabfb5a0bbe0",
+      "run_id": "Run01",
+      "threshold": 0.4,
+      "validation_macro_f1": 0.7112228561791474
+    },
+    {
+      "checkpoint_sha256": "85cb301538b2c8ccb06b714337391698771afa569efce93c448415e845b428fd",
+      "prediction_sha256": "f7dec146b2ece0ef362e42169c3a47af159a2de81b10a1454ec473b7536d648b",
+      "run_id": "Run02",
+      "threshold": 0.4,
+      "validation_macro_f1": 0.7375929977851912
+    },
+    {
+      "checkpoint_sha256": "a8ae50bfea646f34849961be3204b9860dcf7c7e87de159498c7b59872fd369d",
+      "prediction_sha256": "37478dc07944054926ee7809c45324cfcb1ca032ac4ffd47ff6a8ab6a2d74d1a",
+      "run_id": "Run03",
+      "threshold": 0.45,
+      "validation_macro_f1": 0.7079441770088172
+    },
+    {
+      "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+      "prediction_sha256": "e0fea49debfa0b1499e87e9e65faf1df29b9b1c41105d4e7015fc84ce86bd5e1",
+      "run_id": "Run04",
+      "threshold": 0.45,
+      "validation_macro_f1": 0.753055069132175
+    },
+    {
+      "checkpoint_sha256": "f2912b418819bc6732958f103b07708c95e3bad15219e5cbcc9f0bccda7ef744",
+      "prediction_sha256": "2368fb229878adc230c4f3daaf90fd1c8ca15932a7bc1c42ab93496b04a6be63",
+      "run_id": "Run05",
+      "threshold": 0.45,
+      "validation_macro_f1": 0.7483897351944307
+    },
+    {
+      "checkpoint_sha256": "b333edab9b69d7c85c6405fa468ad767c820adbe12825bcdf661dc5aa069c266",
+      "prediction_sha256": "6e3772edcf23bd6a00ae31079c86346a389cbe555e80d81b6aeab26fe10f6dda",
+      "run_id": "Run06",
+      "threshold": 0.5,
+      "validation_macro_f1": 0.7568484456444432
+    }
+  ],
+  "source": "V4_2_SYNTHETIC_VAL_288",
+  "status": "FROZEN"
+}

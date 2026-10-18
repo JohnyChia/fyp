@@ -1,10 +1,10 @@
 gazebo_collector:
   ros__parameters:
-    output_dir: '/home/johny/durian_ws/experiment/outputs/current_world_gazebo/runs'
+    output_dir: '/home/johny/durian_ws/captured_images/gazebo_collection'
     image_topic: '/camera/image_raw'
     depth_topic: '/camera/depth/image_raw'
     camera_info_topic: '/camera/camera_info'
-    world_path: '/home/johny/durian_ws/experiment/domain_gap/b0/durian_farm_scale_1x.world'
+    world_path: '/home/johny/durian_ws/experiment/durian_farm_scale_1x.world'
     texture_path: '/home/johny/durian_ws/src/durian_inspection_pkg/config/materials/textures'
     radii: [0.8, 1.1, 1.4]
     num_angles: 8
@@ -16,4 +16,3 @@ gazebo_collector:
     min_visible_leaves: 3
     min_bbox_px: 16
     preferred_bbox_px: 32
-p

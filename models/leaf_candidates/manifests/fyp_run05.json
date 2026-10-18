@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "candidate": "fyp_run05",
+  "status": "AVAILABLE",
+  "deployment_status": "BLOCKER",
+  "filename": "checkpoint_best_ema.pth",
+  "absolute_path": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/checkpoints/Run05/checkpoint_best_ema.pth",
+  "sha256": "f2912b418819bc6732958f103b07708c95e3bad15219e5cbcc9f0bccda7ef744",
+  "file_size_bytes": 120974435,
+  "architecture": "RF-DETR Nano",
+  "framework": "rfdetr",
+  "framework_version": "1.11.0",
+  "source_experiment": "formal-eight-run Run05 V4.1 synthetic-only selected EMA epoch 188",
+  "native_inference_resolution": [384, 384],
+  "canonical_class_order": [
+    {"id": 0, "name": "leaf_algal"},
+    {"id": 1, "name": "leaf_blight"},
+    {"id": 2, "name": "leaf_colletotrichum"},
+    {"id": 3, "name": "leaf_healthy"},
+    {"id": 4, "name": "leaf_phomopsis"},
+    {"id": 5, "name": "leaf_rhizoctonia"}
+  ],
+  "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+  "checkpoint_class_order_verification": "PASS",
+  "checkpoint_evidence": {
+    "foreground_classes": 6,
+    "classifier_outputs_including_no_object": 7,
+    "selected_weight_source": "ema",
+    "registry_role": "PRIMARY"
+  },
+  "runtime_output_indexing_verification": "PASS",
+  "selected_validation_threshold": 0.45,
+  "runtime_smoke_verification": "PASS_CUDA_ROS2_GAZEBO_TESTED_WORKSTATION",
+  "blocker": "Tested-workstation E2E is PASS; reproduce the receipt on any different production hardware target before release."
+}

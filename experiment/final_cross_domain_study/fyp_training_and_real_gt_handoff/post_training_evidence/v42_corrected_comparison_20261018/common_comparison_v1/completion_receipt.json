@@ -1,0 +1,10 @@
+{
+  "automatic_winner_selected": false,
+  "common_evaluator_receipt_sha256": "e939d0616fa2b583dc3f815d603f458b2df3f070a40f4c7a1d92a70d7a8a0020",
+  "comparison_sha256": "f0892c8a612d793ca3e649348cbb462d599cd323fd6b13bf7d4eedc25b77d8a3",
+  "real_gt_receipt_sha256": null,
+  "registry_sha256": "238ab8b85c1be2ee8a6ae114de3bef1cf4b080432885aa1ede305cd91535d8c5",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "threshold_receipt_sha256": "b57fabd1cfbc4197223b2718650a565df4f3a5891c8977590428c63ebd71cfda"
+}

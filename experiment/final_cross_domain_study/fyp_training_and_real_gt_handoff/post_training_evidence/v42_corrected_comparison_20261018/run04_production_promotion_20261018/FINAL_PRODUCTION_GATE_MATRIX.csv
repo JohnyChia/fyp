@@ -1,0 +1,25 @@
+gate,status,evidence
+pre_promotion_critical_sha256,PASS,Run04 checkpoint proposed config original Run01 config and rollback snapshot matched
+approved_proposed_configuration_applied,PASS,80368b54f0c713e5dd55848e551cc12ce1f1e40e7a2715e882ff4e991f8bc5ed was installed byte-for-byte before testing
+run04_checkpoint_identity,PASS,04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5
+threshold,PASS,0.45 no retuning
+device_policy,PASS,cuda_required
+six_class_mapping,PASS,35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642
+preprocessing,PASS,framework_native_rect_original_pixel_inverse_map and frozen-common-evaluator-v1
+cuda_gpu_resource,PASS,48 inferences p90 48.6293 ms peak reserved VRAM 104 MB
+non_finite_output,PASS,0
+coordinate_validity,PASS,0 violations
+active_config_backend_smoke,PASS,attempt02 3 of 3 inference requests completed with isolated DB and log
+final_release_backend_smoke,PASS,3 of 3 inference requests completed through final release manifest
+ros2_configuration_regression,PASS,61 of 61 tests after active switch and again after finalization
+database_binding,PASS,Run04 attempt02 Run01 rollback and final Run04 databases independently checked
+log_receipt_binding,PASS,all recorded SHA256 values matched
+run01_rollback_snapshot,PASS,8 of 8 snapshot files verified
+run01_rollback_load,PASS,2 CUDA inference requests checkpoint threshold mapping DB and log verified
+run04_restored_after_rollback,PASS,active backend fyp_run04_v42
+final_active_configuration,PASS,f2d159baeaa135c536b552e2919106fafd455f4f91ee7807ce21d4c27dd9e9c4
+prior_exact_sha_six_tree_e2e,PASS,1e0895ec3fe739fcc2f33775ce76f6c3e1cab8f51844735bcb58aa32d0fbed95
+sealed_test_boundary,PASS,no sealed test access
+old_v41_run04_manifest_reuse,PASS,false
+git_commit_push,PASS,none performed
+attempt01_harness_error,RESOLVED_FAIL_CLOSED,hard model gate not reached Run01 restored before corrected attempt02

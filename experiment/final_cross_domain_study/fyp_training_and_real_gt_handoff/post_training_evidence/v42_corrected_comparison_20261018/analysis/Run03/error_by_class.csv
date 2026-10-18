@@ -1,0 +1,7 @@
+class_id,class_name,synthetic_tp,synthetic_fp,synthetic_fn,synthetic_recall_iou50,ai_real_reference_tp,ai_real_reference_fp,ai_real_reference_fn,ai_real_reference_recall_iou50
+0,leaf_algal,1163,214,767,0.6025906735751295,0,21,16,0.0
+1,leaf_blight,1039,160,889,0.5389004149377593,0,5,17,0.0
+2,leaf_colletotrichum,1206,212,706,0.6307531380753139,2,26,21,0.08695652173913043
+3,leaf_healthy,1211,183,758,0.6150330116810564,5,49,17,0.22727272727272727
+4,leaf_phomopsis,1247,398,686,0.6451112260734609,0,5,26,0.0
+5,leaf_rhizoctonia,1140,155,779,0.594059405940594,5,57,16,0.23809523809523808

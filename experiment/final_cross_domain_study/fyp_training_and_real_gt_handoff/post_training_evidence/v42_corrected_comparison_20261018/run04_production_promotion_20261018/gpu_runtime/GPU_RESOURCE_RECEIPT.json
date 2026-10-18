@@ -1,0 +1,28 @@
+{
+  "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+  "coordinate_violation_count": 0,
+  "device_name": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+  "device_total_memory_mb": 4095.5,
+  "gpu_latency_ms": {
+    "maximum": 77.013333,
+    "mean": 37.266393541666666,
+    "median": 35.3553275,
+    "p90": 48.6293
+  },
+  "input_manifest_sha256": "e299c94cb57748f1fede14a76aea036446fd269d9a5f62a00286100dbc2d0079",
+  "non_finite_output_count": 0,
+  "peak_vram_allocated_mb": 85.73681640625,
+  "peak_vram_reserved_mb": 104.0,
+  "prediction_count_at_frozen_threshold": 52,
+  "protocol_sha256": "e41ec2ac0745727d2c886b24b4df96bdb0b4a809bb8082ea28f718a5cd3f3e44",
+  "registry_sha256": "238ab8b85c1be2ee8a6ae114de3bef1cf4b080432885aa1ede305cd91535d8c5",
+  "rejected_background_count": 0,
+  "run_id": "Run04",
+  "sample_count": 48,
+  "schema_version": "durian.run04_v42_gpu_resource_audit.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "threshold": 0.45,
+  "torch_cuda_version": "12.1",
+  "torch_version": "2.5.1+cu121"
+}

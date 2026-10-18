@@ -1,7 +1,32 @@
 # FYP Durian Inspection System
 
-Autonomous durian-tree inspection using **ROS 2**, **Gazebo**, RGB-D vision,
-YOLO models, SQLite, and a Flutter monitoring application.
+Autonomous durian-tree inspection using **ROS 2 Humble**, **Gazebo**, RGB-D
+vision, selectable detector backends, SQLite, and a Flutter monitoring app.
+
+## Final FYP release status
+
+The completed deployment-oriented study contains six trained models. Run07 and
+Run08 were cancelled before training and are not represented as completed
+experiments. The frozen primary scientific selection remains **Run01**, while
+**Run04 YOLO26n-P2 V4.2 corrected Hybrid** is the engineering winner and the
+active ROS2 production model after exact-checkpoint CUDA/Gazebo verification.
+
+| Production field | Frozen value |
+|---|---|
+| Backend | `fyp_run04_v42` |
+| Checkpoint SHA-256 | `04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5` |
+| Active config SHA-256 | `f2d159baeaa135c536b552e2919106fafd455f4f91ee7807ce21d4c27dd9e9c4` |
+| Detection threshold | `0.45` |
+| Device policy | `cuda_required` |
+| Classes | six canonical leaf-condition classes |
+| Run01 rollback | snapshot 8/8 verified; CUDA load drill PASS |
+
+The checkpoints remain SHA-bound artifacts in
+[`JohnyChia/durian_training`](https://github.com/JohnyChia/durian_training/tree/model-synthetic-and-hybrid/models_8run)
+at commit `d673a31b09543fb4e7aca4bb10bb22b6bfc76bd1`; they are not duplicated in
+this repository. See the [final release index](docs/releases/fyp-final-20261018/README.md)
+for the evidence chain, model identities, recovery requirements, and declared
+limitations.
 
 The robot discovers and visits each tree, captures synchronized RGB-D evidence,
 returns home, processes the saved observations, and publishes a final disease
@@ -71,11 +96,9 @@ Tree YOLO -> Distance -> Target association -> Tree ROI
 
 ```text
 durian_ws/
-├── models/
-│   └── durian_leaf/              # Six-class leaf checkpoints (Git LFS)
-│       ├── original.pt
-│       ├── baseline.pt
-│       └── advanced.pt
+├── models/leaf_candidates/       # Local checkpoints + lightweight manifests
+├── runtime/                      # Backend setup and verification tools
+├── scripts/                      # Development-safe test/validation helpers
 ├── src/
 │   ├── durian_inspection_pkg/    # ROS 2 inspection package
 │   │   ├── inspection_server.py  # Navigation and inspection controller
@@ -86,17 +109,25 @@ durian_ws/
 │   │   └── map_publisher.py      # Stored map publisher
 │   └── durian_message/           # Custom ROS interfaces
 ├── durian_flutter_app/           # Flutter monitoring application
+├── validate_fyp_development.sh   # Sealed-test-safe readiness validator
 ├── run.sh                        # Build and launch script
 └── README.md
 ```
 
-## Leaf models
+## Leaf detector backends
 
-| Model | Training data | Purpose |
-|---|---|---|
-| `original.pt` | Gazebo images | Original synthetic-domain model |
-| `baseline.pt` | Balanced real and Gazebo images | Domain-gap baseline |
-| `advanced.pt` | Balanced real and Gazebo images | Advanced EfficientNet experiment |
+The backend-neutral worker supports `yolo26n`, `yolo26n_p2`, `rfdetr_n`, and
+`dfine_n`. It normalizes class IDs, confidence, and XYXY boxes before returning
+results to ROS. Framework dependencies are isolated from the ROS environment.
+
+Backend, checkpoint, thresholds, runtime and class identity are selected by a
+validated deployment YAML. A different validated file can be supplied without
+editing ROS source:
+
+```bash
+ros2 launch durian_inspection_pkg navigation_launch.py \
+  leaf_deployment_config:=/absolute/path/to/leaf_detector_deployment.yaml
+```
 
 The checkpoints classify six conditions:
 
@@ -106,6 +137,27 @@ The checkpoints classify six conditions:
 - Healthy
 - Phomopsis
 - Rhizoctonia
+
+## Final model-selection methodology
+
+All six checkpoints were evaluated through the same frozen prediction
+contract. Thresholds were selected only on the permitted common Synthetic Val
+cohort; Synthetic/Gazebo Dev and the frozen 58-image AI-assisted real reference
+were scored without retuning. The sealed test was not accessed.
+
+Run04 led Synthetic/Gazebo Dev at mAP50-95 `0.5613` and scored `0.2409` on the
+AI-assisted real reference. Run02 led that real reference at `0.2454`, a small
+difference on a non-expert, 58-image supporting cohort. Under the frozen
+Synthetic/Gazebo-first engineering policy, Run04 remained the recommended
+candidate and then passed the exact-SHA CUDA ROS2/Gazebo deployment gates.
+Run06 was excluded by hard-gate failures; it was never silently promoted.
+
+The scientific and engineering conclusions are deliberately separate:
+
+- **Primary scientific selection:** Run01, preserving the original frozen
+  synthetic-control scope.
+- **Engineering selection and active deployment:** Run04 V4.2 corrected Hybrid.
+- **Rollback deployment:** Run01, with a hash-verified recovery snapshot.
 
 ## Requirements
 
@@ -119,7 +171,9 @@ The checkpoints classify six conditions:
 
 ## Clone
 
-Model checkpoints are stored with Git LFS.
+Historical intentionally tracked checkpoints use Git LFS. Current candidate
+checkpoints and formal experiment assets are local-only and are not distributed
+by this public repository.
 
 ```bash
 sudo apt-get update
@@ -147,6 +201,19 @@ source /usr/share/gazebo/setup.sh
 ros2 launch durian_inspection_pkg navigation_launch.py
 ```
 
+## Development validation
+
+```bash
+./validate_fyp_development.sh
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest -q \
+  src/durian_inspection_pkg/test
+```
+
+Current software status is `FINAL_FYP_RELEASE`. Six-model comparison,
+Run04 exact-checkpoint CUDA/Gazebo E2E verification, controlled production
+promotion, Run01 rollback verification, and the controlled GitHub release gate
+are complete. The release commit identity is authoritative in Git history.
+
 ## Runtime outputs
 
 | Output | Description |
@@ -155,14 +222,35 @@ ros2 launch durian_inspection_pkg navigation_launch.py
 | `processed_images/<inspection>/<tree>/` | Annotated inference results |
 | `durian_inspection.db` | Observations and final tree results |
 
-Runtime outputs, build files, databases, and general model files are ignored by
-Git. The following local training and dataset directories are also excluded:
+Runtime outputs, build products, databases, runtime environments, datasets,
+formal packages and local checkpoints are ignored by Git and must remain local:
 
 ```text
 experiment/
 hybrid_datasets/
 external_datasets/
+runtime/leaf_backend_deps/
+runtime/leaf_backend_sources/
+models/leaf_candidates/*_best.pt
+models/leaf_candidates/*_best.pth
 ```
+
+## Reproducibility boundaries
+
+- V4.2 repaired Hybrid source-family leakage and is bound to correction
+  manifest SHA-256
+  `b634760affc11ce33f4dcbda5904aa4c482480824a3650b2d70b9add45a062bd`.
+- V4.1 synthetic-only and V4.2 corrected-Hybrid runs are useful for deployment
+  engineering, but they are not a clean same-dataset causal estimate of the
+  Hybrid-training effect.
+- The 58-image real reference is AI-assisted FYP evidence, not independent
+  expert ground truth. No sealed-test performance claim is made.
+- CUDA/Gazebo release verification applies to the tested NVIDIA GeForce RTX
+  3050 Ti Laptop GPU workstation. Other hardware requires fresh deployment
+  verification without retuning.
+- The active production profile intentionally references the external
+  `durian_training` checkout by absolute path. Restore that checkout and verify
+  its SHA-bound checkpoint before launching on a recovered workstation.
 
 ## Tree status
 
@@ -172,4 +260,3 @@ processing  -- successful durable result -->  completed
 
 If processing fails, the error is stored in `processing_error` and the tree
 remains `processing`. It is never incorrectly labelled `completed`.
-

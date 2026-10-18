@@ -1,0 +1,30 @@
+{
+  "schema_version": "durian.fyp_proposal_deployment_decision_policy.v1",
+  "status": "FROZEN",
+  "frozen_before_sealed_test": true,
+  "automatic_hidden_weighted_score": false,
+  "final_selection_requires_eligible_real_scoring": false,
+  "proposal_ai_assisted_reference_required": true,
+  "proposal_ai_assisted_reference_is_independent_expert_gt": false,
+  "candidate_runs": ["Run01", "Run02", "Run03", "Run04", "Run05", "Run06"],
+  "primary_selection_runs": ["Run01", "Run03", "Run05"],
+  "historical_diagnostic_only_runs": ["Run02", "Run04", "Run06"],
+  "cancelled_not_trained_runs": ["Run07", "Run08"],
+  "eligibility": {
+    "ros2_end_to_end_pass": true,
+    "non_finite_output_count_max": 0,
+    "coordinate_violation_count_max": 0,
+    "repeated_inference_mismatch_count_max": 0
+  },
+  "lexicographic_order": [
+    {"metric": "synthetic_dev_map50_95", "direction": "descending"},
+    {"metric": "fyp_ai_reference_moderate_high_map50_95", "direction": "descending"},
+    {"metric": "perturbation_retention", "direction": "descending"},
+    {"metric": "calibration_ece", "direction": "ascending"},
+    {"metric": "cpu_p90_latency_ms", "direction": "ascending"},
+    {"metric": "peak_rss_mb", "direction": "ascending"}
+  ],
+  "interpretation": "Synthetic/Gazebo accuracy is authoritative. AI-assisted Real reference agreement on the 86 HIGH/MODERATE-confidence objects is a proposal-stage secondary criterion; the 39 LOW-confidence objects remain diagnostic-only and this is not independent Real accuracy. Run02, Run04 and Run06 remain visible V4.1 Hybrid diagnostics but are not clean V4.2 Hybrid-effect evidence or primary high-integrity selection candidates.",
+  "tie_policy": "If all declared metrics are exactly equal, report an unresolved tie; do not choose by run name.",
+  "sealed_test_accessed": false
+}

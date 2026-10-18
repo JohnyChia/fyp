@@ -8,8 +8,14 @@ echo "--- Killing robot nodes ---"
 pkill -9 -f vision_node || true
 pkill -9 -f depth_node || true
 pkill -9 -f bridge_node || true
+pkill -9 -f inspection_server || true
+pkill -9 -f processing_node || true
+pkill -9 -f leaf_backend_runtime || true
+pkill -9 -f durian_inspection_pkg/gui || true
 pkill -9 -f mapping_launch || true
 pkill -9 -f nav2 || true
+pkill -9 -x gzserver || true
+pkill -9 -x gzclient || true
 
 sleep 1
 
@@ -21,8 +27,8 @@ cd ~/durian_ws || { echo "Failed to enter workspace"; exit 1; }
 
 rm -rf build/ install/ log/
 
-echo "--- Building all packages in workspace ---"
-colcon build --symlink-install || { echo "Build failed"; exit 1; }
+echo "--- Building inspection package and workspace dependencies ---"
+colcon build --packages-up-to durian_inspection_pkg --symlink-install || { echo "Build failed"; exit 1; }
 
 source install/setup.bash
 
@@ -40,7 +46,9 @@ export GAZEBO_MODEL_PATH="$HOME/.gazebo/models:${GAZEBO_MODEL_PATH}"
 unset CYCLONEDDS_URI
 export ROS_DOMAIN_ID=0
 
-export FASTRTPS_DEFAULT_PROFILES_FILE=""
+# An empty profile filename is still parsed by Fast DDS and produces a
+# misleading XMLPARSER realpath error in every ROS process.
+unset FASTRTPS_DEFAULT_PROFILES_FILE
 export RCUTILS_LOGGING_BUFFERED_STREAM=1
 
 echo "--- DDS sanity check ---"

@@ -1,0 +1,49 @@
+{
+  "backend": "fyp_run04_v42",
+  "capture_root": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/inspection_outputs/model4_v42_captured",
+  "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+  "database": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/inspection_outputs/model4_v42.db",
+  "database_sha256": "5f93a34d4a07970e3ccf86155041eccf5c788cbcaaa01de6523c9ad254dba978",
+  "database_validation": {
+    "captured_observations": 1369,
+    "checkpoint_sha256s": [
+      "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5"
+    ],
+    "expected_tree_rows": 6,
+    "leaf_backends": [
+      "fyp_run04_v42"
+    ],
+    "pass": true,
+    "processing_errors": [],
+    "statuses": [
+      "completed",
+      "completed",
+      "completed",
+      "completed",
+      "completed",
+      "completed"
+    ],
+    "tree_rows": 6
+  },
+  "deployment_config": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/inspection_outputs/model4_v42_config.yaml",
+  "deployment_config_sha256": "4d3795d29fe316e67ade06236b003a42cc030decb13028892ea46391700c0f8e",
+  "inspection_id": "inspection_20261018_123341_6658e6b8",
+  "label": "model4_v42",
+  "log": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/inspection_outputs/model4_v42.log",
+  "log_sha256": "ac3d3597439d9e7558eb4168572a651774f55f716204e31313a1767865acb72d",
+  "processed_root": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/inspection_outputs/model4_v42_processed",
+  "run_id": "Run04",
+  "schema_version": "durian.six_model_gazebo_inspection.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "terminal_status": {
+    "inspection_id": "inspection_20261018_123341_6658e6b8",
+    "reason": "",
+    "state": "COMPLETED",
+    "success": true,
+    "terminal": true,
+    "version": 1
+  },
+  "threshold": 0.45,
+  "wall_time_s": 1307.1464414596558
+}

@@ -1,0 +1,44 @@
+{
+  "active_config_sha256": "f2d159baeaa135c536b552e2919106fafd455f4f91ee7807ce21d4c27dd9e9c4",
+  "adapter_version": "frozen-common-evaluator-v1",
+  "backend": "fyp_run04_v42",
+  "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+  "class_mapping": [
+    "leaf_algal",
+    "leaf_blight",
+    "leaf_colletotrichum",
+    "leaf_healthy",
+    "leaf_phomopsis",
+    "leaf_rhizoctonia"
+  ],
+  "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+  "coordinate_violation_count": 0,
+  "database": {
+    "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_production_promotion_20261018/final_release_backend_smoke/run04_production_smoke.db",
+    "sha256": "ab20a6d1eaf1ec3a44db4a0bf7dfbd93ddaae05db0999168d0f68ac6e0c8d5eb"
+  },
+  "detection_counts": [
+    1,
+    1,
+    1
+  ],
+  "device_policy": "cuda_required",
+  "inference_runs": 3,
+  "input_path_disclosed": false,
+  "input_sha256": "03333719175f7caf69986dc1de382ea486d24deaf5785f847df975beff1916c1",
+  "latency_ms": [
+    8618.263435,
+    40.646181,
+    32.482445
+  ],
+  "log": {
+    "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_production_promotion_20261018/final_release_backend_smoke/run04_production_smoke.log",
+    "sha256": "60e0537bfe67d7f2accd385c48bbf2bc602dfc4cb88b46a0f99766827d297f9f"
+  },
+  "non_finite_output_count": 0,
+  "resize_policy": "framework_native_rect_original_pixel_inverse_map",
+  "schema_version": "durian.run04_v42.production_backend_smoke.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "threshold": 0.45
+}

@@ -1,0 +1,104 @@
+{
+  "controlled_real_test": {
+    "baseline_repetitions": 3,
+    "transforms": [
+      {
+        "id": "brightness_0.75",
+        "operation": "RGB brightness factor 0.75"
+      },
+      {
+        "id": "brightness_1.25",
+        "operation": "RGB brightness factor 1.25"
+      },
+      {
+        "id": "jpeg_q70",
+        "operation": "in-memory JPEG quality 70 round-trip"
+      },
+      {
+        "id": "scale_0.80",
+        "operation": "resize about image center to 80%, black pad, inverse-map boxes"
+      },
+      {
+        "id": "scale_1.20",
+        "operation": "resize about image center to 120%, center crop, inverse-map boxes"
+      }
+    ]
+  },
+  "cpu": {
+    "batch_size": 1,
+    "device": "cpu",
+    "interop_threads": 1,
+    "intraop_threads": 8
+  },
+  "derived_from_protocol_sha256": "729576b38a7d0de9f9b9510aae412a607cfca2a5bd26a23e116dea0a4bb78878",
+  "frozen_date": "2026-10-09",
+  "inference": {
+    "coordinate_space": "original input pixels after inverse transform",
+    "rfdetr": {
+      "max_detections": 300,
+      "raw_confidence_floor": 0.001,
+      "shape": [
+        384,
+        384
+      ]
+    },
+    "warmups_per_model": 1,
+    "yolo": {
+      "agnostic_nms": false,
+      "augment": false,
+      "imgsz": 640,
+      "iou": 0.7,
+      "max_det": 300,
+      "raw_confidence_floor": 0.001,
+      "rect": true
+    }
+  },
+  "matching": {
+    "algorithm": "Greedy one-to-one highest-IoU matching, reference order confidence descending then coordinates, IoU >= 0.50",
+    "class_aware_agreement": "matched pair has identical canonical class",
+    "class_switch": "class-agnostic spatial match with different canonical class",
+    "reference": "baseline repetition 1",
+    "retention": "matched reference detections / reference detections; descriptive only",
+    "small_object": "reference predicted box area < 1024 original-pixel squared"
+  },
+  "models": [
+    "Run01",
+    "Run02",
+    "Run03",
+    "Run04",
+    "Run05"
+  ],
+  "operating_thresholds": {
+    "Run01": 0.4,
+    "Run02": 0.4,
+    "Run03": 0.45,
+    "Run04": 0.45,
+    "Run05": 0.45,
+    "Run06": 0.5
+  },
+  "protocol_version": "1.0.0",
+  "purpose": "Bounded CPU prediction-consistency comparison; not an accuracy evaluation",
+  "robot_temporal_test": {
+    "limitation": "camera/robot motion and scene visibility vary; no tracking IDs or GT, so this is temporal repeatability evidence, not temporal accuracy",
+    "metrics": "adjacent-frame count changes, class-histogram changes, spatial matches and class switches",
+    "scope": "ordered frames from one fixed inspection/tree/viewpoint metadata group"
+  },
+  "schema_version": 1,
+  "scientific_limits": {
+    "accuracy_metrics": false,
+    "gpu": false,
+    "ground_truth_used": false,
+    "real_labels_used_for_scoring": false,
+    "training": false
+  },
+  "sealed_test_accessed": false,
+  "selection": {
+    "prediction_independent": true,
+    "real_images": "For each canonical image-level class, choose the lexicographically smallest SHA256 in the frozen Phase 2I 59-image cohort; source class is used only for stratified selection and never as object GT.",
+    "robot_sequence": "Choose the lexicographically first inspection/tree/viewpoint group having at least 12 complete hash-valid RGB metadata pairs; take the first 12 by numeric RGB timestamp.",
+    "sealed_test_forbidden": true
+  },
+  "status": "FROZEN_BEFORE_INFERENCE",
+  "threshold_source": "Phase 2C frozen synthetic_val threshold receipt",
+  "v42_threshold_receipt_sha256": "b57fabd1cfbc4197223b2718650a565df4f3a5891c8977590428c63ebd71cfda"
+}

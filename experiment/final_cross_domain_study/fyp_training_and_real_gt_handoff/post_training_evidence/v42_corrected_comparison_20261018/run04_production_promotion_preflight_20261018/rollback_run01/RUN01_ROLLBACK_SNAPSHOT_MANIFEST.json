@@ -1,0 +1,21 @@
+{
+  "schema_version": "durian.run01.rollback_snapshot.v1",
+  "status": "PASS",
+  "created_for": "Run04 V4.2 production promotion preflight",
+  "active_backend_at_snapshot": "fyp_run01",
+  "active_configuration_sha256": "28f157300d187ad63e57a1658fca3cfd020c02647bc402b5db3c3cb376152005",
+  "run01_checkpoint_sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+  "files": [
+    {"path": "src/durian_inspection_pkg/config/leaf_detector_deployment.yaml", "bytes": 8279, "sha256": "28f157300d187ad63e57a1658fca3cfd020c02647bc402b5db3c3cb376152005"},
+    {"path": "checkpoints/run01_best.pt", "bytes": 5410757, "sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0"},
+    {"path": "models/leaf_candidates/manifests/fyp_run01.json", "bytes": 1329, "sha256": "7a30e5b47bb28dd821957a96e5d1731aa80bb58091966c2fd3d0d4184a418ae8"},
+    {"path": "src/durian_inspection_pkg/leaf_backend_runtime.py", "bytes": 27278, "sha256": "264c94baf7d49d4a8ff8f2bbbbbdeef19a9037159cc311a1fe71b1562af0a91d"},
+    {"path": "src/durian_inspection_pkg/checkpoint_manifest.py", "bytes": 3931, "sha256": "b0095f97ab6a36450fb415689780ca4740b406def588c85aa1971908d879f1b4"},
+    {"path": "src/durian_inspection_pkg/canonical_leaf_classes.py", "bytes": 3398, "sha256": "c1372ddc438deb5f636abb8d8c7fb5d95d6c8d7baf597be68c6b61182117fbc5"},
+    {"path": "src/durian_inspection_pkg/inspection_server.py", "bytes": 80403, "sha256": "3cc268960acf16f1945c1be9178be561f9a5c7ef9cecf5dc9f4145567e1e829a"},
+    {"path": "src/durian_inspection_pkg/launch/navigation_launch.py", "bytes": 14065, "sha256": "ff001d6d72e7bd482c2875f4badd825573212c9486aa8fc4ec28b94eab01b4b4"}
+  ],
+  "copy_policy": "independent byte copies; originals were not overwritten",
+  "active_deployment_modified": false,
+  "sealed_test_accessed": false
+}

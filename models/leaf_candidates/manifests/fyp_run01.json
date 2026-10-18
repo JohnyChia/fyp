@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "candidate": "fyp_run01",
+  "status": "AVAILABLE",
+  "deployment_status": "BLOCKER",
+  "filename": "best.pt",
+  "absolute_path": "/home/johny/durian_ws/experiment/analysis/dev_validation_audit/phase2b/artifacts/run01/best.pt",
+  "sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+  "file_size_bytes": 5410757,
+  "architecture": "Ultralytics YOLO26n",
+  "framework": "ultralytics",
+  "framework_version": "8.4.152",
+  "source_experiment": "formal-eight-run Run01 V4.1 synthetic-only",
+  "native_inference_resolution": [640, 640],
+  "canonical_class_order": [
+    {"id": 0, "name": "leaf_algal"},
+    {"id": 1, "name": "leaf_blight"},
+    {"id": 2, "name": "leaf_colletotrichum"},
+    {"id": 3, "name": "leaf_healthy"},
+    {"id": 4, "name": "leaf_phomopsis"},
+    {"id": 5, "name": "leaf_rhizoctonia"}
+  ],
+  "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+  "checkpoint_class_order_verification": "PASS",
+  "checkpoint_evidence": {"foreground_classes": 6, "registry_role": "PRIMARY"},
+  "selected_validation_threshold": 0.40,
+  "runtime_smoke_verification": "PASS_CUDA_ROS2_GAZEBO_TESTED_WORKSTATION",
+  "blocker": "Tested-workstation E2E is PASS; reproduce the receipt on any different production hardware target before release."
+}

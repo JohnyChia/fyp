@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
+import json
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy
 from durian_message.srv import InspectionControl
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 from cv_bridge import CvBridge
 import threading
 import time
@@ -20,6 +23,62 @@ ros_node_ref = None
 
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
+
+MISSION_STATUS_VERSION = 1
+MISSION_STATES = frozenset({
+    "READY",
+    "INSPECTING",
+    "RETURNING_HOME",
+    "PROCESSING",
+    "COMPLETED",
+    "CANCELED",
+    "FAILED",
+})
+TERMINAL_MISSION_STATES = frozenset({"COMPLETED", "CANCELED", "FAILED"})
+RELATIVE_EVIDENCE_SEMANTICS = "relative_class_area_evidence_percent_v1"
+
+
+def mission_status_qos():
+    """Match the server's reliable transient-local status publisher."""
+    return QoSProfile(
+        reliability=ReliabilityPolicy.RELIABLE,
+        durability=DurabilityPolicy.TRANSIENT_LOCAL,
+        depth=1,
+    )
+
+
+def parse_mission_status(serialized):
+    """Validate and normalize the versioned ROS mission-status payload."""
+    payload = json.loads(serialized)
+    if not isinstance(payload, dict):
+        raise ValueError("mission status must be a JSON object")
+    if payload.get("version") != MISSION_STATUS_VERSION:
+        raise ValueError("unsupported mission status version")
+
+    state = payload.get("state")
+    if state not in MISSION_STATES:
+        raise ValueError(f"unsupported mission state: {state}")
+    terminal = payload.get("terminal")
+    success = payload.get("success")
+    inspection_id = payload.get("inspection_id")
+    reason = payload.get("reason")
+    if not isinstance(terminal, bool) or not isinstance(success, bool):
+        raise ValueError("terminal and success must be booleans")
+    if not isinstance(inspection_id, str) or not isinstance(reason, str):
+        raise ValueError("inspection_id and reason must be strings")
+    if terminal != (state in TERMINAL_MISSION_STATES):
+        raise ValueError("terminal flag does not match mission state")
+    if success != (state == "COMPLETED"):
+        raise ValueError("success flag does not match mission state")
+
+    return {
+        "version": MISSION_STATUS_VERSION,
+        "state": state,
+        "inspection_id": inspection_id,
+        "terminal": terminal,
+        "success": success,
+        "reason": reason,
+    }
 
 
 def generate_frames():
@@ -58,14 +117,27 @@ def video_feed():
 @flask_app.route('/api/status')
 def api_status():
     if ros_node_ref is None:
-        return jsonify({"service_ready": False, "current_status": "Starting...", "inspection_finished": False})
+        return jsonify({
+            "service_ready": False,
+            "current_status": "Starting...",
+            "inspection_finished": False,
+            "inspection_state": "UNKNOWN",
+            "inspection_id": "",
+            "inspection_succeeded": False,
+            "failure_reason": "",
+        })
 
     is_ready = ros_node_ref.client.service_is_ready() and getattr(ros_node_ref, 'nav2_ready', False)
+    mission = ros_node_ref.ui_app.get_mission_snapshot()
 
     return jsonify({
         "service_ready": is_ready,
         "current_status": getattr(ros_node_ref.ui_app, 'current_status_text', "Running") if ros_node_ref.ui_app else "Running",
-        "inspection_finished": getattr(ros_node_ref.ui_app, 'inspection_finished', False)
+        "inspection_finished": mission["inspection_finished"],
+        "inspection_state": mission["inspection_state"],
+        "inspection_id": mission["inspection_id"],
+        "inspection_succeeded": mission["inspection_succeeded"],
+        "failure_reason": mission["failure_reason"],
     })
 
 
@@ -82,15 +154,9 @@ def api_command():
         if not is_ready:
             return jsonify({"success": False, "error": "Nav2 not ready yet, please wait"})
         success = ros_node_ref.send_command_sync("start")
-        if success:
-            ros_node_ref.ui_app.inspection_finished = False
-            ros_node_ref.ui_app.update_status("🔵 Inspecting...", "blue")
         return jsonify({"success": success})
     elif cmd == "stop":
         success = ros_node_ref.send_command_sync("stop")
-        if success:
-            ros_node_ref.ui_app.update_status(" Inspection canceled via Mobile...", "orange")
-            ros_node_ref.ui_app.inspection_finished = True
         return jsonify({"success": success})
 
     return jsonify({"success": False, "error": "Invalid command"})
@@ -104,7 +170,7 @@ def api_history():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute("""SELECT id, tree_x, tree_y, distance, scan_time, status,
-                                 timestamp, disease_name, coverage, priority, remedy,
+                                 timestamp, disease_name, coverage, confidence, priority, remedy,
                                  tree_id, cache_hit
                           FROM inspection_log ORDER BY id DESC""")
         rows = cursor.fetchall()
@@ -121,11 +187,16 @@ def api_history():
                 "status": r[5],
                 "timestamp": r[6],
                 "disease_name": r[7],
+                # Keep `coverage` for existing clients. It is relative class-area
+                # evidence, not biological disease severity or canopy prevalence.
                 "coverage": r[8],
-                "priority": r[9],
-                "remedy": r[10],
-                "tree_id": r[11],
-                "cache_hit": bool(r[12])
+                "relative_detection_evidence_percent": r[8],
+                "coverage_semantics": RELATIVE_EVIDENCE_SEMANTICS,
+                "confidence": r[9],
+                "priority": r[10],
+                "remedy": r[11],
+                "tree_id": r[12],
+                "cache_hit": bool(r[13])
             })
         return jsonify({"success": True, "history": history_list})
     except Exception as e:
@@ -216,14 +287,20 @@ class RosGuiClient(Node):
         self.client = self.create_client(InspectionControl, "control_inspection")
         self.bridge = CvBridge()
         self.latest_frame = None
+        self.nav2_ready = False
 
-        from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
         sub_qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
             depth=5
         )
         self.image_sub = self.create_subscription(Image, "/camera/image_raw", self.image_callback, sub_qos)
+        self.inspection_status_sub = self.create_subscription(
+            String,
+            "/inspection_status",
+            self.inspection_status_callback,
+            mission_status_qos(),
+        )
 
         from geometry_msgs.msg import PoseStamped
         self.tree_found = False
@@ -245,19 +322,41 @@ class RosGuiClient(Node):
         except Exception as e:
             self.get_logger().error(f"Error converting image: {e}")
 
+    def inspection_status_callback(self, msg):
+        try:
+            self.ui_app.apply_mission_status(parse_mission_status(msg.data))
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            self.get_logger().error(f"Invalid /inspection_status payload: {exc}")
+
     def monitor_service_status(self):
         time.sleep(0.5)
-        self.ui_app.update_status("Attempting to connect to the control service node...", "orange")
+        if self.ui_app.get_mission_snapshot()["inspection_state"] in (
+            "UNKNOWN",
+            "READY",
+        ):
+            self.ui_app.update_status(
+                "Attempting to connect to the control service node...", "orange"
+            )
 
         while rclpy.ok():
             if self.client.service_is_ready():
                 if self.nav_client.server_is_ready():
                     self.nav2_ready = True
-                    self.ui_app.update_status("Ready! Start inspection.", "green")
+                    if self.ui_app.get_mission_snapshot()["inspection_state"] in (
+                        "UNKNOWN",
+                        "READY",
+                    ):
+                        self.ui_app.update_status("Ready! Start inspection.", "green")
                     self.ui_app.enable_buttons()
                     break
                 else:
-                    self.ui_app.update_status("Service Connected | Waiting for Nav2...", "orange")
+                    if self.ui_app.get_mission_snapshot()["inspection_state"] in (
+                        "UNKNOWN",
+                        "READY",
+                    ):
+                        self.ui_app.update_status(
+                            "Service Connected | Waiting for Nav2...", "orange"
+                        )
             time.sleep(1.0)
 
     def send_command(self, cmd_string):
@@ -313,7 +412,12 @@ class RosGuiClient(Node):
 class HeadlessApp:
     def __init__(self):
         self.current_status_text = "Initializing..."
+        self._mission_state_lock = threading.Lock()
+        self.inspection_state = "UNKNOWN"
+        self.inspection_id = ""
         self.inspection_finished = False
+        self.inspection_succeeded = False
+        self.failure_reason = ""
         self.ros_node = RosGuiClient(self)
 
         self.ros_spin_thread = threading.Thread(target=self.spin_ros, daemon=True)
@@ -335,19 +439,51 @@ class HeadlessApp:
     def spin_ros(self):
         try:
             rclpy.spin(self.ros_node)
-        except Exception:
+        except (KeyboardInterrupt, Exception):
             pass
 
     def update_status(self, text, color=None):
         self.current_status_text = text
         print(f"[STATUS UPDATE]: {text}")
 
+    def apply_mission_status(self, payload):
+        status_text = {
+            "READY": "Ready! Start inspection.",
+            "INSPECTING": "Inspecting...",
+            "RETURNING_HOME": "Returning home...",
+            "PROCESSING": "Processing inspection results...",
+            "COMPLETED": "Inspection complete.",
+            "CANCELED": "Inspection canceled.",
+            "FAILED": "Inspection failed.",
+        }[payload["state"]]
+        if payload["state"] == "FAILED" and payload["reason"]:
+            status_text = f"Inspection failed: {payload['reason']}"
+
+        with self._mission_state_lock:
+            self.inspection_state = payload["state"]
+            self.inspection_id = payload["inspection_id"]
+            self.inspection_finished = payload["terminal"]
+            self.inspection_succeeded = payload["success"]
+            self.failure_reason = (
+                payload["reason"] if payload["state"] == "FAILED" else ""
+            )
+            self.current_status_text = status_text
+        print(f"[MISSION STATUS]: {status_text}")
+
+    def get_mission_snapshot(self):
+        with self._mission_state_lock:
+            return {
+                "inspection_state": self.inspection_state,
+                "inspection_id": self.inspection_id,
+                "inspection_finished": self.inspection_finished,
+                "inspection_succeeded": self.inspection_succeeded,
+                "failure_reason": self.failure_reason,
+            }
+
     def enable_buttons(self):
         pass
 
     def on_start_click(self):
-        self.inspection_finished = False
-        self.update_status("🔵 Inspecting...", "blue")
         self.ros_node.send_command("start")
 
     def run(self):
@@ -356,8 +492,13 @@ class HeadlessApp:
                 time.sleep(1.0)
         except KeyboardInterrupt:
             pass
-        finally:
-            self.ros_node.destroy_node()
+
+    def shutdown(self):
+        """Stop the ROS executor thread before destroying its node."""
+        if rclpy.ok():
+            rclpy.shutdown()
+        self.ros_spin_thread.join(timeout=2.0)
+        self.ros_node.destroy_node()
 
 
 def main(args=None):
@@ -366,8 +507,7 @@ def main(args=None):
     try:
         app.run()
     finally:
-        if rclpy.ok():
-            rclpy.shutdown()
+        app.shutdown()
 
 
 if __name__ == "__main__":

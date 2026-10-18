@@ -208,6 +208,13 @@
       <max_wheel_torque>200</max_wheel_torque>
       <max_wheel_acceleration>1.5</max_wheel_acceleration>
 
+      <!-- Controlled-simulation localization: odom is derived directly from
+           Gazebo world pose, not integrated wheel encoders. -->
+      <!-- gazebo_ros_diff_drive uses its documented integer enum:
+           0 = wheel encoder integration, 1 = Gazebo world pose. -->
+      <odometry_source>1</odometry_source>
+      <update_rate>50</update_rate>
+
       <publish_odom>true</publish_odom>
       <publish_odom_tf>true</publish_odom_tf>
       <odometry_frame>odom</odometry_frame>

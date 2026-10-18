@@ -1,0 +1,61 @@
+{
+  "automatic_hidden_weighted_score": false,
+  "candidate_runs": [
+    "Run01",
+    "Run02",
+    "Run03",
+    "Run04",
+    "Run05",
+    "Run06"
+  ],
+  "eligibility": {
+    "coordinate_violation_count_max": 0,
+    "non_finite_output_count_max": 0,
+    "repeated_inference_mismatch_count_max": 0,
+    "ros2_end_to_end_pass": true
+  },
+  "final_selection_requires_eligible_real_scoring": false,
+  "frozen_before_new_v42_common_evaluation": true,
+  "frozen_before_sealed_test": true,
+  "interpretation": "Engineering deployment ranking across the six exact checkpoints. It is not a clean causal estimate of Hybrid versus Synthetic training because dataset versions and effective recipes differ. AI-assisted Real reference scores are secondary diagnostics, not expert-verified Real accuracy.",
+  "lexicographic_order": [
+    {
+      "direction": "descending",
+      "metric": "synthetic_dev_map50_95"
+    },
+    {
+      "direction": "descending",
+      "metric": "fyp_ai_reference_moderate_high_map50_95"
+    },
+    {
+      "direction": "descending",
+      "metric": "perturbation_retention"
+    },
+    {
+      "direction": "ascending",
+      "metric": "calibration_ece"
+    },
+    {
+      "direction": "ascending",
+      "metric": "cpu_p90_latency_ms"
+    },
+    {
+      "direction": "ascending",
+      "metric": "peak_rss_mb"
+    }
+  ],
+  "primary_selection_runs": [
+    "Run01",
+    "Run02",
+    "Run03",
+    "Run04",
+    "Run05",
+    "Run06"
+  ],
+  "proposal_ai_assisted_reference_is_independent_expert_gt": false,
+  "proposal_ai_assisted_reference_required": true,
+  "schema_version": "durian.v42_engineering_deployment_policy.v1",
+  "sealed_test_accessed": false,
+  "status": "FROZEN",
+  "tie_policy": "An exact declared-metric tie remains unresolved."
+}

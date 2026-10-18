@@ -1,0 +1,11 @@
+{
+  "ai_reference_is_independent_expert_gt": false,
+  "ai_reference_sha256": "22ec6b50baac66909a32aed092592cf6e952370fe8c1c8abd76c33bdcd6a3c73",
+  "common_comparison_sha256": "f0892c8a612d793ca3e649348cbb462d599cd323fd6b13bf7d4eedc25b77d8a3",
+  "overlay_comparison_sha256": "4332937afec719af487ac11a15c6b70f5cf33184ec3da434b20c6259b2772165",
+  "registry_sha256": "238ab8b85c1be2ee8a6ae114de3bef1cf4b080432885aa1ede305cd91535d8c5",
+  "schema_version": "durian.v42_six_model_analysis_receipt.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "synthetic_ground_truth_sha256": "d841970d5d7227ed830cfec72fb8605f0cd488b3fd14469891da5c4133c6f703"
+}

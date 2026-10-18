@@ -1,0 +1,89 @@
+{
+  "checks": {
+    "CONFIG_LOCKS": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "DATASET_COUNTS": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "EXPLICIT_RESUME_IDENTITY": {
+      "detail": null,
+      "status": "PASS"
+    },
+    "HYBRID_COMPONENTS": {
+      "detail": {
+        "real": 561,
+        "synthetic": 864
+      },
+      "status": "PASS"
+    },
+    "INITIALIZER_HASH_LOCKS": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "NO_EXACT_CROSS_SPLIT_DUPLICATES": {
+      "detail": {
+        "synthetic_dev<->real_dev": 0,
+        "train<->real_dev": 0,
+        "train<->synthetic_dev": 0,
+        "train<->validation_combined": 0,
+        "validation_combined<->real_dev": 0,
+        "validation_combined<->synthetic_dev": 0
+      },
+      "status": "PASS"
+    },
+    "NO_SYMLINKS": {
+      "detail": null,
+      "status": "PASS"
+    },
+    "PACKAGE_HASHES": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "REQUIRED_PATHS": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "RFDETR_RECIPE_PARITY": {
+      "detail": null,
+      "status": "PASS"
+    },
+    "SAFE_COMPARISON_POLICY": {
+      "detail": "native evaluation must be Synthetic-only; no pseudo-Real winner/automatic export; active work must be durable",
+      "status": "PASS"
+    },
+    "SEALED_TEST_GUARD": {
+      "detail": {
+        "policy": "never access for training, validation, model selection, or package validation",
+        "sealed_test_accessed": false,
+        "sealed_test_included": false
+      },
+      "status": "PASS"
+    },
+    "SOURCE_FAMILY_ISOLATION": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "TRAINING_AUTHORIZATION_GATE": {
+      "detail": null,
+      "status": "PASS"
+    },
+    "YOLO_COCO_EQUIVALENCE": {
+      "detail": [],
+      "status": "PASS"
+    },
+    "YOLO_LABEL_SCHEMA": {
+      "detail": [],
+      "status": "PASS"
+    }
+  },
+  "errors": [],
+  "formal_training_started": false,
+  "root": "/home/johny/durian_ws/experiment/final_cross_domain_study/durian_v4_2_8run_ready",
+  "schema_version": 2,
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "validated_at": "2026-10-10T06:37:22.041095+00:00"
+}

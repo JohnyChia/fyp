@@ -1,8 +1,15 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import TimerAction, IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    Shutdown,
+    TimerAction,
+)
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from ament_index_python.packages import get_package_share_directory
 import os
 import xacro
@@ -30,12 +37,34 @@ def generate_launch_description():
     robot_description_content = doc.toxml()
 
     world_file = os.path.expanduser('/home/johny/durian_ws/experiment/durian_farm_scale_1x.world')
+    navigation_only_validation = LaunchConfiguration('navigation_only_validation')
+    gazebo_gui = LaunchConfiguration('gazebo_gui')
+    enable_rtabmap_diagnostics = LaunchConfiguration('enable_rtabmap_diagnostics')
+    database_path = LaunchConfiguration('database_path')
+    capture_root = LaunchConfiguration('capture_root')
+    processed_root = LaunchConfiguration('processed_root')
+    enable_operator_ui = LaunchConfiguration('enable_operator_ui')
+    operator_ui_condition = IfCondition(PythonExpression([
+        "'", enable_operator_ui, "' == 'true' and '",
+        navigation_only_validation, "' == 'false'",
+    ]))
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(gazebo_ros_pkg, 'launch', 'gazebo.launch.py')),
-        launch_arguments={'world': world_file, 'verbose': 'true'}.items()
+        launch_arguments={
+            'world': world_file,
+            'verbose': 'true',
+            'gui': gazebo_gui,
+        }.items()
     )
 
     nav2_params_file = os.path.join(pkg_path, 'config', 'nav2_params.yaml')
+    default_leaf_deployment_config_file = os.path.join(
+        pkg_path, 'config', 'leaf_detector_deployment.yaml'
+    )
+    leaf_deployment_config_file = LaunchConfiguration('leaf_deployment_config')
+    navigation_map_file = os.path.join(
+        pkg_path, 'maps', 'controlled_orchard_navigation.yaml'
+    )
 
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -50,7 +79,60 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'navigation_only_validation', default_value='false',
+            description='Run navigation/capture-state validation without perception or DB results.',
+        ),
+        DeclareLaunchArgument(
+            'gazebo_gui', default_value='true',
+            description='Start the Gazebo graphical client.',
+        ),
+        DeclareLaunchArgument(
+            'enable_rtabmap_diagnostics', default_value='false',
+            description=(
+                'Enable non-authoritative RTAB-Map diagnostics. It never '
+                'publishes navigation TF or /map.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'leaf_deployment_config',
+            default_value=default_leaf_deployment_config_file,
+            description=(
+                'Validated backend/checkpoint deployment YAML; selects '
+                'yolo26n, yolo26n_p2, rfdetr_n, or dfine_n without source edits.'
+            ),
+        ),
+        DeclareLaunchArgument(
+            'database_path',
+            default_value='/home/johny/durian_ws/durian_inspection.db',
+            description='Per-run SQLite evidence database path.',
+        ),
+        DeclareLaunchArgument(
+            'capture_root',
+            default_value='/home/johny/durian_ws/captured_images',
+            description='Per-run captured RGB-D evidence root.',
+        ),
+        DeclareLaunchArgument(
+            'processed_root',
+            default_value='/home/johny/durian_ws/processed_images',
+            description='Per-run processed inference artifact root.',
+        ),
+        DeclareLaunchArgument(
+            'enable_operator_ui', default_value='true',
+            description='Launch HTTP/WebSocket bridge and Flask operator UI.',
+        ),
         gazebo,
+
+        # SIMULATION ONLY: Gazebo world odometry is the authoritative global
+        # localization source. RTAB-Map is forbidden from publishing map->odom.
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='simulation_map_to_odom',
+            arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+            parameters=[{'use_sim_time': True}],
+            output='screen',
+        ),
 
         Node(package='robot_state_publisher', executable='robot_state_publisher',
              parameters=[{'robot_description': robot_description_content, 'use_sim_time': True}]),
@@ -87,6 +169,29 @@ def generate_launch_description():
                 ),
 
                 Node(
+                    package='nav2_map_server',
+                    executable='map_server',
+                    name='map_server',
+                    parameters=[{
+                        'use_sim_time': True,
+                        'yaml_filename': navigation_map_file,
+                    }],
+                    output='screen',
+                ),
+
+                Node(
+                    package='nav2_lifecycle_manager',
+                    executable='lifecycle_manager',
+                    name='lifecycle_manager_static_map',
+                    parameters=[{
+                        'use_sim_time': True,
+                        'autostart': True,
+                        'node_names': ['map_server'],
+                    }],
+                    output='screen',
+                ),
+
+                Node(
                     package='rtabmap_sync', executable='rgbd_sync', name='rgbd_sync',
                     remappings=[
                         ('rgb/image', '/camera/image_raw'),
@@ -100,7 +205,8 @@ def generate_launch_description():
                         'sync_queue_size': 100,
                         'topic_queue_size': 100,
                         'use_sim_time': True
-                    }]
+                    }],
+                    condition=IfCondition(enable_rtabmap_diagnostics),
                 ),
 
                 Node(
@@ -113,9 +219,9 @@ def generate_launch_description():
                         'subscribe_rgb': False,
                         'sync_queue_size': 50,
                         'topic_queue_size': 50,
-                        'publish_tf': True,
+                        'publish_tf': False,
                         'odom_frame_id': 'odom',
-                        'map_frame_id': 'map',
+                        'map_frame_id': 'rtabmap_map',
                         'frame_id': 'base_footprint',
                         'tf_delay': 0.05,
                         'Rtabmap/DetectionRate': '1.0',
@@ -126,18 +232,32 @@ def generate_launch_description():
                     remappings=[
                         ('rgbd_image', '/rtabmap/rgbd_image'),
                         ('odom', '/odom'),
-                        ('grid_map', '/map'),
+                        # RTAB-Map's OccupancyGrid output is named "map".
+                        # Keep it diagnostic-only and never compete with the
+                        # authoritative Nav2 map_server on /map.
+                        ('map', '/rtabmap/grid_map'),
                         ('cloud_map', '/rtabmap/cloud_map')
                     ],
-                    arguments=['-d']
+                    arguments=['-d'],
+                    condition=IfCondition(enable_rtabmap_diagnostics),
                 ),
 
                 Node(
                     package='durian_inspection_pkg',
                     executable='inspection_server',
                     name='inspection_server',
-                    parameters=[{'use_sim_time': True, 'world_path': world_file}],
-                    output='screen'
+                    parameters=[{
+                        'use_sim_time': True,
+                        'world_path': world_file,
+                        'auto_shutdown_after_completion': True,
+                        'leaf_deployment_config_path': leaf_deployment_config_file,
+                        'navigation_only_validation': navigation_only_validation,
+                        'database_path': database_path,
+                    }],
+                    output='screen',
+                    on_exit=Shutdown(
+                        reason='inspection server completed; stopping system'
+                    ),
                 ),
 
                 Node(
@@ -145,7 +265,8 @@ def generate_launch_description():
                     executable='bridge_node',
                     name='bridge_node',
                     parameters=[{'use_sim_time': True, 'world_path': world_file}],
-                    output='screen'
+                    output='screen',
+                    condition=operator_ui_condition,
                 ),
 
                 Node(
@@ -153,7 +274,8 @@ def generate_launch_description():
                     executable='gui',
                     name='gui',
                     parameters=[{'use_sim_time': True, 'world_path': world_file}],
-                    output='screen'
+                    output='screen',
+                    condition=operator_ui_condition,
                 ),
 
                 Node(
@@ -162,12 +284,18 @@ def generate_launch_description():
                     name='vision_node',
                     parameters=[{
                         'use_sim_time': True,
-                        'capture_root': '/home/johny/durian_ws/captured_images',
-                        'database_path': '/home/johny/durian_ws/durian_inspection.db',
+                        'capture_root': capture_root,
+                        'database_path': database_path,
                         'capture_interval_sec': 0.1,
                         'rgb_depth_tolerance_sec': 0.15,
+                        'tf_lookup_timeout_sec': 0.3,
+                        # Capture occurs only after the stationary localization
+                        # gate. Bound latest-TF fallback rather than persisting
+                        # observations with missing transforms.
+                        'tf_latest_fallback_max_age_sec': 1.5,
                     }],
-                    output='screen'
+                    output='screen',
+                    condition=UnlessCondition(navigation_only_validation),
                 ),
 
                 Node(
@@ -176,19 +304,39 @@ def generate_launch_description():
                     name='processing_node',
                     parameters=[{
                         'use_sim_time': True,
-                        'database_path': '/home/johny/durian_ws/durian_inspection.db',
-                        'processed_root': '/home/johny/durian_ws/processed_images',
+                        'database_path': database_path,
+                        'processed_root': processed_root,
                         'model_tree_path': '/home/johny/durian_ws/models/durian_tree/best_tree_hybrid_v2.pt',
                         'model_fruit_path': '/home/johny/durian_ws/models/durian/best_v8.pt',
-                        'model_leaf_path': '/home/johny/durian_ws/experiment/outputs/production_efficientnet/weights/best.pt',
-                        'leaf_inference_scales': [1024, 768, 512],
+                        'leaf_deployment_config_path': leaf_deployment_config_file,
                         'leaf_roi_context_scale': 1.5,
                         'leaf_roi_max_area_ratio': 0.85,
                         'leaf_roi_min_size': 80,
+                        'diagnostic_logging_enabled': False,
+                        'diagnostic_artifacts_enabled': False,
                     }],
-                    output='screen'
+                    output='screen',
+                    condition=UnlessCondition(navigation_only_validation),
                 ),
             ]
+        ),
+
+        TimerAction(
+            # The inspection server itself rejects start until Nav2 is ready.
+            # Give the delayed Gazebo spawn and Nav2 lifecycle bringup enough
+            # time before this single validation-only start request.
+            period=50.0,
+            actions=[
+                ExecuteProcess(
+                    cmd=[
+                        'ros2', 'service', 'call', '/control_inspection',
+                        'durian_message/srv/InspectionControl',
+                        '{command: start}',
+                    ],
+                    output='screen',
+                    condition=IfCondition(navigation_only_validation),
+                )
+            ],
         ),
 
     ])

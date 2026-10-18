@@ -1,0 +1,15 @@
+{
+  "active_backend_preserved": "fyp_run01",
+  "active_config_path": "/home/johny/durian_ws/src/durian_inspection_pkg/config/leaf_detector_deployment.yaml",
+  "active_config_sha256_before_after": "28f157300d187ad63e57a1658fca3cfd020c02647bc402b5db3c3cb376152005",
+  "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+  "deployment_config": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/RUN04_V42_ISOLATED_DEPLOYMENT.yaml",
+  "deployment_config_sha256": "4d3795d29fe316e67ade06236b003a42cc030decb13028892ea46391700c0f8e",
+  "isolated_backend": "fyp_run04_v42",
+  "manifest": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/RUN04_V42_ISOLATED_MANIFEST.json",
+  "manifest_sha256": "581bf54e3696ac4adfc54b377af500529b670cf1c9ff10de62d75c27fe42c6cb",
+  "schema_version": "durian.run04_v42_isolated_bundle.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "threshold": 0.45
+}

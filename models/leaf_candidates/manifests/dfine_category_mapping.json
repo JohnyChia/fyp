@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "frozen_source_commit": "956d1709314c2c6a4df6f34de232054578a7449f",
+  "historical_workspace_evidence": {
+    "experiment_config": {
+      "path": "experiment/controlled_experiment/configs/dfine_n.json",
+      "sha256": "24cbe33e2af8738e786ea90b5ba318bcf34744b71ab1fc21d4bcb7ab3480f974",
+      "remap_mscoco_category": false
+    },
+    "native_training_template": {
+      "path": "experiment/controlled_experiment/native/dfine_n_custom.yml",
+      "sha256": "a03927d66d325a36740f528bc23bdf0ebafd1c8c1365276acca0790f5e52dbc0",
+      "remap_mscoco_category": false
+    },
+    "controlled_readme_status": "configurations and controls are frozen; training has not started",
+    "classification": "Historical/planned workspace files; not the frozen successful-run source."
+  },
+  "frozen_run_evidence": {
+    "repository_commit": "6db81100a857b1e45e58d73872e7c89cb3766c30",
+    "repository_commit_subject": "Finalize fixed 100-epoch controlled training",
+    "experiment_config": {
+      "path": "experiment/controlled_experiment/configs/dfine_n.json",
+      "git_blob": "f10cf4324ada4e5f4767a8535aee7b03ea25ea66",
+      "sha256": "1975dc54719752348c3b58c9eac28679fe5fc4ea969296f8d8841d4abebf7125",
+      "remap_mscoco_category": true,
+      "epochs": 100
+    },
+    "native_training_template": {
+      "path": "experiment/controlled_experiment/native/dfine_n_custom.yml",
+      "git_blob": "d0739aa0feccee9ede9e94521d3d4eab0f4ace62",
+      "sha256": "5b917b259a518e8180b376c7c22acfabbf231fc7481ae42a945b7a3aad42d9f1",
+      "remap_mscoco_category": true,
+      "epochs": 100
+    },
+    "candidate_runner": {
+      "path": "experiment/training_model/candidate_runner.py",
+      "git_blob": "87545d56c85924889501268f20d470863ddfc45a",
+      "sha256": "9adfd1fd9112dedf9f6208dca74a28f49c3fc400a79c3e0a9d46058c1edaa2d3",
+      "validates_true_remap": true,
+      "only_replaces_path_and_output_tokens": true,
+      "verifies_framework_commit": true
+    }
+  },
+  "checkpoint_evidence": {
+    "path": "/home/johny/durian_ws/models/leaf_candidates/dfine_n_best.pth",
+    "sha256": "c341291d32a8a80d4d7a352cdd6c4a949eaaddb32ca6b07ad79073fc66ff2542",
+    "file_size_bytes": 60838695,
+    "last_epoch": 85,
+    "checkpoint_date": "2026-09-29T13:26:31.253656",
+    "archive_checkpoint_name": "best_stg2",
+    "classification_head_outputs": 6,
+    "denoising_embedding_rows_including_no_object": 7,
+    "class_names_embedded": false,
+    "remap_setting_embedded": false,
+    "scheduler_milestone_state": {"500": 1},
+    "scheduler_last_epoch": 73,
+    "warmup_duration": 500,
+    "warmup_last_step": 3096
+  },
+  "frozen_source_behavior": {
+    "dataset_false": "COCO category IDs pass through unchanged as target labels.",
+    "dataset_true": "MS-COCO category IDs are converted through mscoco_category2label.",
+    "matcher": "Target labels index the num_classes-wide probability dimension directly.",
+    "postprocessor_non_deploy_true": "Raw head indices are remapped to MS-COCO category IDs before results are returned.",
+    "postprocessor_deploy": "The deploy-mode early return exposes raw head indices before optional MS-COCO remapping."
+  },
+  "category_representations": {
+    "source_coco_category_ids": [1, 2, 3, 4, 5, 6],
+    "remap_mscoco_category": true,
+    "dataset_loader_target_labels": [0, 1, 2, 3, 4, 5],
+    "matcher_classification_target_labels": [0, 1, 2, 3, 4, 5],
+    "internal_model_head_indices": [0, 1, 2, 3, 4, 5],
+    "framework_native_deploy_postprocessor_labels": [0, 1, 2, 3, 4, 5],
+    "non_deploy_evaluation_labels": [1, 2, 3, 4, 5, 6],
+    "controlled_coco_export_category_ids": [1, 2, 3, 4, 5, 6],
+    "canonical_deployment_ids": [0, 1, 2, 3, 4, 5]
+  },
+  "proven_mapping": [
+    {"annotation_category": 1, "training_target": 0, "internal_label": 0, "deploy_mode_label": 0, "non_deploy_label": 1, "export_category": 1, "canonical_class_id": 0, "canonical_name": "leaf_algal"},
+    {"annotation_category": 2, "training_target": 1, "internal_label": 1, "deploy_mode_label": 1, "non_deploy_label": 2, "export_category": 2, "canonical_class_id": 1, "canonical_name": "leaf_blight"},
+    {"annotation_category": 3, "training_target": 2, "internal_label": 2, "deploy_mode_label": 2, "non_deploy_label": 3, "export_category": 3, "canonical_class_id": 2, "canonical_name": "leaf_colletotrichum"},
+    {"annotation_category": 4, "training_target": 3, "internal_label": 3, "deploy_mode_label": 3, "non_deploy_label": 4, "export_category": 4, "canonical_class_id": 3, "canonical_name": "leaf_healthy"},
+    {"annotation_category": 5, "training_target": 4, "internal_label": 4, "deploy_mode_label": 4, "non_deploy_label": 5, "export_category": 5, "canonical_class_id": 4, "canonical_name": "leaf_phomopsis"},
+    {"annotation_category": 6, "training_target": 5, "internal_label": 5, "deploy_mode_label": 5, "non_deploy_label": 6, "export_category": 6, "canonical_class_id": 5, "canonical_name": "leaf_rhizoctonia"}
+  ],
+  "proof_result": "PASS",
+  "runtime_smoke_verification": "PASS",
+  "runtime_smoke_evidence": {
+    "runtime_date": "2026-09-30",
+    "observed_deploy_class_ids": [1, 2, 3, 4],
+    "canonical_interpretation": "Direct zero-based canonical IDs with no subtraction.",
+    "cuda_inference": true
+  },
+  "blocker": null
+}

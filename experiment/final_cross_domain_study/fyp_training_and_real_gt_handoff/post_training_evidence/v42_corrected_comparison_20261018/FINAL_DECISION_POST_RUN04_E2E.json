@@ -1,0 +1,18 @@
+{
+  "automatic_promotion_performed": false,
+  "current_active_model": "Run01",
+  "engineering_highest_scoring_model": "Run04",
+  "post_e2e_gate_matrix": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/FINAL_GATE_MATRIX_POST_RUN04_E2E.csv",
+  "post_e2e_gate_matrix_sha256": "39cebd0e4b153765b6b5bb73c222077648a0c4080f859b61ec818af40e7a16a0",
+  "primary_scientific_selection": "Run01",
+  "promotion_requires_explicit_user_approval": true,
+  "recommended_deployment_model": "Run04",
+  "run02_fallback_required": false,
+  "run04_gate_receipt": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_ros2_gazebo_e2e_20261018_attempt02/RUN04_FINAL_E2E_GATE_RECEIPT.json",
+  "run04_gate_receipt_sha256": "1e0895ec3fe739fcc2f33775ce76f6c3e1cab8f51844735bcb58aa32d0fbed95",
+  "run06_candidate_status": "EXCLUDED_HARD_GATE_FAIL",
+  "schema_version": "durian.v42_six_model_post_run04_e2e_decision.v1",
+  "sealed_test_accessed": false,
+  "status": "RUN04_ELIGIBLE_PROMOTION_APPROVAL_REQUIRED",
+  "supersedes_runtime_blocker_in": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/FINAL_DECISION_RECEIPT.json"
+}

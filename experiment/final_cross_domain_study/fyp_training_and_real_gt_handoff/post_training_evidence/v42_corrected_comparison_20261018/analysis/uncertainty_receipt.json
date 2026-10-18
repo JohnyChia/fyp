@@ -1,0 +1,52 @@
+{
+  "comparisons": [
+    {
+      "baseline": "Run01",
+      "bootstrap_mean_delta_macro_f1": 0.022720844127483077,
+      "candidate": "Run02",
+      "ci95_high": 0.029256476730235723,
+      "ci95_low": 0.016078792099591625,
+      "label": "Run02_minus_Run01",
+      "probability_delta_gt_zero": 1.0
+    },
+    {
+      "baseline": "Run03",
+      "bootstrap_mean_delta_macro_f1": 0.04471484220438921,
+      "candidate": "Run04",
+      "ci95_high": 0.050434760380769286,
+      "ci95_low": 0.03913822981671056,
+      "label": "Run04_minus_Run03",
+      "probability_delta_gt_zero": 1.0
+    },
+    {
+      "baseline": "Run05",
+      "bootstrap_mean_delta_macro_f1": 0.0052016994805713776,
+      "candidate": "Run06",
+      "ci95_high": 0.010145409314363857,
+      "ci95_low": 0.0008454261670015506,
+      "label": "Run06_minus_Run05",
+      "probability_delta_gt_zero": 0.993
+    },
+    {
+      "baseline": "Run02",
+      "bootstrap_mean_delta_macro_f1": 0.009752683102779165,
+      "candidate": "Run04",
+      "ci95_high": 0.01599790137499919,
+      "ci95_low": 0.00402295250224047,
+      "label": "Run04_minus_Run02",
+      "probability_delta_gt_zero": 0.9985
+    }
+  ],
+  "ground_truth_sha256": "d841970d5d7227ed830cfec72fb8605f0cd488b3fd14469891da5c4133c6f703",
+  "limitations": [
+    "Synthetic Dev sampling uncertainty only; excludes training-seed, real-domain and annotation uncertainty.",
+    "This is macro-F1 uncertainty, not COCO mAP uncertainty.",
+    "V4.1 Synthetic versus V4.2 Hybrid deltas are not single-variable causal effects."
+  ],
+  "method": "paired percentile bootstrap over 36 physical-tree clusters",
+  "metric": "frozen-threshold macro-F1 at class-aware IoU 0.50, maxDets=100",
+  "replicates": 2000,
+  "sealed_test_accessed": false,
+  "seed": 20261018,
+  "status": "PASS"
+}

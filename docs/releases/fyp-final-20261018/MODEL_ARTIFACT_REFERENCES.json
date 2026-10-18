@@ -1,0 +1,62 @@
+{
+  "schema_version": "durian.fyp.external_model_references.v1",
+  "repository": "https://github.com/JohnyChia/durian_training",
+  "branch": "model-synthetic-and-hybrid",
+  "commit": "d673a31b09543fb4e7aca4bb10bb22b6bfc76bd1",
+  "storage": "Git LFS in the model repository; checkpoint bytes are not duplicated in JohnyChia/fyp",
+  "runs": [
+    {
+      "run_id": "Run01",
+      "path": "models_8run/model1_yolo26n_synthetic/best.pt",
+      "sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+      "bytes": 5410757,
+      "condition": "V4.1 synthetic-only",
+      "role": "primary scientific selection and rollback"
+    },
+    {
+      "run_id": "Run02",
+      "path": "models_8run/model2_yolo26n_hybrid/best.pt",
+      "sha256": "85cb301538b2c8ccb06b714337391698771afa569efce93c448415e845b428fd",
+      "bytes": 5411141,
+      "condition": "V4.2 corrected Hybrid",
+      "role": "engineering comparison"
+    },
+    {
+      "run_id": "Run03",
+      "path": "models_8run/model3_yolo26n_p2_synthetic/best.pt",
+      "sha256": "a8ae50bfea646f34849961be3204b9860dcf7c7e87de159498c7b59872fd369d",
+      "bytes": 5678075,
+      "condition": "V4.1 synthetic-only",
+      "role": "primary scientific selection set"
+    },
+    {
+      "run_id": "Run04",
+      "path": "models_8run/model4_yolo26n_p2_hybrid/best.pt",
+      "sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+      "bytes": 21205716,
+      "condition": "V4.2 corrected Hybrid",
+      "role": "engineering winner and active production"
+    },
+    {
+      "run_id": "Run05",
+      "path": "models_8run/model5_rfdetr_n_synthetic/weights/checkpoint_best_ema.pth",
+      "sha256": "f2912b418819bc6732958f103b07708c95e3bad15219e5cbcc9f0bccda7ef744",
+      "bytes": 120974435,
+      "condition": "V4.1 synthetic-only",
+      "role": "primary scientific selection set"
+    },
+    {
+      "run_id": "Run06",
+      "path": "models_8run/model6_rfdetr_n_hybrid/weights/checkpoint_best_ema.pth",
+      "sha256": "b333edab9b69d7c85c6405fa468ad767c820adbe12825bcdf661dc5aa069c266",
+      "bytes": 120974371,
+      "condition": "V4.2 corrected Hybrid",
+      "role": "excluded from deployment by frozen hard gates"
+    }
+  ],
+  "cancelled_runs": [
+    {"run_id": "Run07", "status": "CANCELLED_BEFORE_TRAINING"},
+    {"run_id": "Run08", "status": "CANCELLED_BEFORE_TRAINING"}
+  ],
+  "sealed_test_accessed": false
+}

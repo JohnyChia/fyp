@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "candidate": "yolo26n",
+  "status": "AVAILABLE",
+  "deployment_status": "PASS",
+  "filename": "yolo26n_best.pt",
+  "absolute_path": "/home/johny/durian_ws/models/leaf_candidates/yolo26n_best.pt",
+  "sha256": "8b8e5f3a9a00f06427fd5719aafb44f3185745e21d3fbb494727c7c6ad5aac4d",
+  "file_size_bytes": 5384325,
+  "architecture": "Ultralytics YOLO26n (P3/P4/P5)",
+  "framework": "ultralytics",
+  "framework_version": "8.4.152",
+  "source_experiment": "experiment/controlled_experiment/outputs/yolo26n/seed_20260917/weights/best.pt",
+  "source_seed": 20260917,
+  "source_commit": "03e061fd22ad187fc3f228d14359697ef5720a5b",
+  "native_inference_resolution": [640, 640],
+  "canonical_class_order": [
+    {"id": 0, "name": "leaf_algal"},
+    {"id": 1, "name": "leaf_blight"},
+    {"id": 2, "name": "leaf_colletotrichum"},
+    {"id": 3, "name": "leaf_healthy"},
+    {"id": 4, "name": "leaf_phomopsis"},
+    {"id": 5, "name": "leaf_rhizoctonia"}
+  ],
+  "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+  "checkpoint_class_order_verification": "PASS",
+  "checkpoint_evidence": {
+    "task": "detect",
+    "framework_version": "8.4.152",
+    "seed": 20260917,
+    "class_count": 6,
+    "detection_head_inputs": [16, 19, 22]
+  },
+  "selected_validation_threshold": 0.15,
+  "runtime_smoke_verification": "PASS",
+  "runtime_smoke_evidence": {
+    "runtime_date": "2026-09-30",
+    "runtime_framework_version": "8.4.61",
+    "checkpoint_sha256": "8b8e5f3a9a00f06427fd5719aafb44f3185745e21d3fbb494727c7c6ad5aac4d",
+    "cuda_inference": true,
+    "native_inference": "PASS",
+    "central_worker_inference": "PASS",
+    "finite_valid_boxes": true,
+    "finite_unit_interval_scores": true,
+    "canonical_class_ids": true
+  },
+  "blocker": null
+}

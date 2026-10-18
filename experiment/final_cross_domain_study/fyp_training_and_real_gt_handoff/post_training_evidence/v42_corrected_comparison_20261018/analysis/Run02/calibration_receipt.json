@@ -1,0 +1,56 @@
+{
+  "bins": [
+    {
+      "accuracy": 0.4019396551724138,
+      "count": 928,
+      "high": 0.5,
+      "low": 0.4,
+      "mean_confidence": 0.448586395845331
+    },
+    {
+      "accuracy": 0.5714285714285714,
+      "count": 819,
+      "high": 0.6,
+      "low": 0.5,
+      "mean_confidence": 0.5506077647500277
+    },
+    {
+      "accuracy": 0.7357065803667745,
+      "count": 927,
+      "high": 0.7,
+      "low": 0.6,
+      "mean_confidence": 0.6511356013363876
+    },
+    {
+      "accuracy": 0.8704028021015762,
+      "count": 1142,
+      "high": 0.8,
+      "low": 0.7,
+      "mean_confidence": 0.7538171414214132
+    },
+    {
+      "accuracy": 0.977922077922078,
+      "count": 2310,
+      "high": 0.9,
+      "low": 0.8,
+      "mean_confidence": 0.8569816006468488
+    },
+    {
+      "accuracy": 0.9992854590925331,
+      "count": 2799,
+      "high": 1.0,
+      "low": 0.9,
+      "mean_confidence": 0.9310610911683467
+    }
+  ],
+  "calibration_ece": 0.08316090155716374,
+  "checkpoint_sha256": "85cb301538b2c8ccb06b714337391698771afa569efce93c448415e845b428fd",
+  "cohort": "V4_2_SYNTHETIC_DEV_288",
+  "ground_truth_sha256": "d841970d5d7227ed830cfec72fb8605f0cd488b3fd14469891da5c4133c6f703",
+  "method": "10 equal-width confidence bins; class-aware greedy IoU>=0.50 correctness; frozen threshold; maxDets=100",
+  "predictions_sha256": "612ff37135e555a007058b0c3b256e26d85744afb7d6eb48500e754200e7e0c8",
+  "run_id": "Run02",
+  "schema_version": "durian.v42_calibration_receipt.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS"
+}

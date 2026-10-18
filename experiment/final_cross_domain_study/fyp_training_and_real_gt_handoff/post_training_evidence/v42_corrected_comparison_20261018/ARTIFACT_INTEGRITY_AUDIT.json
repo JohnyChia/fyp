@@ -1,0 +1,133 @@
+{
+  "hybrid_train_images": 1425,
+  "hybrid_validation_images": 399,
+  "runs": {
+    "Run02": {
+      "best_epoch": 177,
+      "best_native_val_map50_95": 0.55518,
+      "checkpoint": {
+        "bytes": 5411141,
+        "path": "/home/johny/durian_training/models_8run/model2_yolo26n_hybrid/best.pt",
+        "sha256": "85cb301538b2c8ccb06b714337391698771afa569efce93c448415e845b428fd"
+      },
+      "effective_config": {
+        "bytes": 1876,
+        "path": "/home/johny/durian_training/models_8run/model2_yolo26n_hybrid/results/args.yaml",
+        "sha256": "85dbaced6e72dc03da0e4d85aeca568e7aaf35bd14a3fa1eadcbc8e2a922382a"
+      },
+      "embedded_checkpoint_identity": {
+        "class_order": [
+          "leaf_algal",
+          "leaf_blight",
+          "leaf_colletotrichum",
+          "leaf_healthy",
+          "leaf_phomopsis",
+          "leaf_rhizoctonia"
+        ],
+        "embedded_batch": 4,
+        "embedded_dataset_path": "/content/v42_run02_workspace/V4_2_RUN02_RUNTIME_DATASET.yaml",
+        "embedded_epochs": 200,
+        "embedded_imgsz": 640,
+        "embedded_nbs": 64,
+        "embedded_patience": 200,
+        "embedded_seed": 20260917,
+        "task": "detect"
+      },
+      "global_best_checkpoint_verified": true,
+      "history": {
+        "bytes": 25558,
+        "path": "/home/johny/durian_training/models_8run/model2_yolo26n_hybrid/results/results.csv",
+        "sha256": "20b8c7b6fe177d9356cc39f87d6f9374c3132f09b83a7a6e533bbcbf28537f84"
+      },
+      "history_rows": 200,
+      "initializer_verification": "NOT_VERIFIED_FROM_PUBLISHED_RUN_ARTIFACTS",
+      "training_completion_receipt": {
+        "bytes": 1247,
+        "path": "/home/johny/durian_training/models_8run/model2_yolo26n_hybrid/results/e200_backup_manifest.json",
+        "sha256": "f90005605e00664efbdbec789730701ae20301ce53901abf4b731f2920eb2649"
+      }
+    },
+    "Run04": {
+      "best_epoch": 167,
+      "best_native_val_map50_95": 0.56938,
+      "checkpoint": {
+        "bytes": 21205716,
+        "path": "/home/johny/durian_training/models_8run/model4_yolo26n_p2_hybrid/best.pt",
+        "sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5"
+      },
+      "effective_config": {
+        "bytes": 1872,
+        "path": "/home/johny/durian_training/models_8run/model4_yolo26n_p2_hybrid/args.yaml",
+        "sha256": "1c4f5a541ae403d38922476dd6702bf56a0b6fa6c94305b0c66f8be40cb101a1"
+      },
+      "embedded_checkpoint_identity": {
+        "class_order": [
+          "leaf_algal",
+          "leaf_blight",
+          "leaf_colletotrichum",
+          "leaf_healthy",
+          "leaf_phomopsis",
+          "leaf_rhizoctonia"
+        ],
+        "embedded_batch": 4,
+        "embedded_dataset_path": "/content/kent_run04_v42_handoff/V42_HYBRID.yaml",
+        "embedded_epochs": 200,
+        "embedded_imgsz": 640,
+        "embedded_nbs": 16,
+        "embedded_patience": 0,
+        "embedded_seed": 20260917,
+        "task": "detect"
+      },
+      "global_best_checkpoint_verified": true,
+      "history": {
+        "bytes": 25579,
+        "path": "/home/johny/durian_training/models_8run/model4_yolo26n_p2_hybrid/results.csv",
+        "sha256": "349235f5ad91c9c73a765afa83fbae951b9b28eb000ac981deaa7078135ef3b5"
+      },
+      "history_rows": 200,
+      "initializer_verification": "NOT_VERIFIED_FROM_PUBLISHED_RUN_ARTIFACTS",
+      "training_completion_receipt": {
+        "bytes": 1276,
+        "path": "/home/johny/durian_training/models_8run/model4_yolo26n_p2_hybrid/FINAL_AUDIT.json",
+        "sha256": "40ba6b8edbf240e3e511eeceb53474349068c524338d90fd8c4b18899ca44f7e"
+      }
+    },
+    "Run06": {
+      "checkpoint": {
+        "bytes": 120974371,
+        "path": "/home/johny/durian_training/models_8run/model6_rfdetr_n_hybrid/weights/checkpoint_best_ema.pth",
+        "sha256": "b333edab9b69d7c85c6405fa468ad767c820adbe12825bcdf661dc5aa069c266"
+      },
+      "effective_config": {
+        "bytes": 1886,
+        "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/durian_v4_2_8run_ready/configs/hybrid/rfdetr_n.json",
+        "sha256": "5ae7f3d747dbcc9935456610f845b1f60c9748d82e08116ecbce87236c8dd494"
+      },
+      "global_best_checkpoint_verified": false,
+      "initializer_verification": "README_CLAIM_ONLY_NO_MACHINE_BOUND_START_RECEIPT",
+      "training_completion_receipt": {
+        "bytes": 1022,
+        "path": "/home/johny/durian_training/models_8run/model6_rfdetr_n_hybrid/results/JOHNY_E200_AUDIT.json",
+        "sha256": "154f2a139ee695b4b3c2ba41abe47f28085e044b0d1447ff2ab2a84c6f5473c3"
+      }
+    }
+  },
+  "schema_version": "durian.v42_artifact_intake_audit.v1",
+  "scientific_limitations": [
+    "Run01/03/05 are retained V4.1 Synthetic models while Run02/04/06 use corrected V4.2 Hybrid; training-condition contrasts are not single-variable causal estimates.",
+    "Run02 effective nbs=64 and patience=200 differ from the canonical frozen nbs=16 and patience=40 recipe.",
+    "Run04 effective patience=0 differs from the canonical frozen patience=40 recipe, although all 200 epochs completed.",
+    "Published Run02/Run04 artifacts do not machine-bind the original initializer SHA-256.",
+    "Run06 has only E196-E200 metrics and its published EMA is not verified as the global E1-E200 best checkpoint.",
+    "The AI-assisted Real reference is not independent expert ground truth."
+  ],
+  "sealed_test_accessed": false,
+  "status": "PASS_WITH_DECLARED_LIMITATIONS",
+  "v42_source_family_correction": {
+    "bytes": 20237,
+    "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/durian_v4_2_8run_ready/manifests/SOURCE_FAMILY_CORRECTION_V4_2.json",
+    "sha256": "b634760affc11ce33f4dcbda5904aa4c482480824a3650b2d70b9add45a062bd"
+  },
+  "verified_branch": "model-synthetic-and-hybrid",
+  "verified_commit": "d673a31b09543fb4e7aca4bb10bb22b6bfc76bd1"
+}

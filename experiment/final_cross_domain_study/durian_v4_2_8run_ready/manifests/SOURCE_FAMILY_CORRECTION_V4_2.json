@@ -1,0 +1,602 @@
+{
+  "assignment_policy": "all confirmed same-leaf/same-scene members assigned to exactly one split",
+  "changes": [
+    {
+      "family_id": "physical_leaf_family_dhash_adjudicated_05",
+      "from": "real_val",
+      "to": "train",
+      "token": "3d4f351de1fcddf9"
+    },
+    {
+      "family_id": "physical_leaf_family_dhash_adjudicated_06",
+      "from": "real_val",
+      "to": "train",
+      "token": "1ee9efbd1d0ad3d3"
+    },
+    {
+      "family_id": "physical_leaf_family_dhash_adjudicated_07",
+      "from": "real_val",
+      "to": "train",
+      "token": "a2490a9e00809393"
+    },
+    {
+      "family_id": "physical_leaf_family_dhash_adjudicated_08",
+      "from": "real_dev",
+      "to": "train",
+      "token": "4cf638b0162046f3"
+    }
+  ],
+  "class_order": [
+    "leaf_algal",
+    "leaf_blight",
+    "leaf_colletotrichum",
+    "leaf_healthy",
+    "leaf_phomopsis",
+    "leaf_rhizoctonia"
+  ],
+  "counts": {
+    "hybrid": {
+      "real_dev": {
+        "boxes": 117,
+        "class_counts_0_to_5": [
+          23,
+          26,
+          17,
+          27,
+          9,
+          15
+        ],
+        "images": 117,
+        "labels": 117
+      },
+      "real_val": {
+        "boxes": 111,
+        "class_counts_0_to_5": [
+          23,
+          26,
+          17,
+          22,
+          9,
+          14
+        ],
+        "images": 111,
+        "labels": 111
+      },
+      "synthetic_dev": {
+        "boxes": 11591,
+        "class_counts_0_to_5": [
+          1930,
+          1928,
+          1912,
+          1969,
+          1933,
+          1919
+        ],
+        "images": 288,
+        "labels": 288
+      },
+      "synthetic_val": {
+        "boxes": 11768,
+        "class_counts_0_to_5": [
+          1931,
+          1941,
+          1956,
+          1964,
+          1980,
+          1996
+        ],
+        "images": 288,
+        "labels": 288
+      },
+      "train": {
+        "boxes": 35701,
+        "class_counts_0_to_5": [
+          5910,
+          5931,
+          6042,
+          6024,
+          5863,
+          5931
+        ],
+        "images": 1425,
+        "labels": 1425
+      },
+      "validation_combined": {
+        "boxes": 11879,
+        "class_counts_0_to_5": [
+          1954,
+          1967,
+          1973,
+          1986,
+          1989,
+          2010
+        ],
+        "images": 399,
+        "labels": 399
+      }
+    },
+    "synthetic_only": {
+      "real_dev": {
+        "boxes": 117,
+        "class_counts_0_to_5": [
+          23,
+          26,
+          17,
+          27,
+          9,
+          15
+        ],
+        "images": 117,
+        "labels": 117
+      },
+      "real_val": {
+        "boxes": 111,
+        "class_counts_0_to_5": [
+          23,
+          26,
+          17,
+          22,
+          9,
+          14
+        ],
+        "images": 111,
+        "labels": 111
+      },
+      "synthetic_dev": {
+        "boxes": 11591,
+        "class_counts_0_to_5": [
+          1930,
+          1928,
+          1912,
+          1969,
+          1933,
+          1919
+        ],
+        "images": 288,
+        "labels": 288
+      },
+      "synthetic_val": {
+        "boxes": 11768,
+        "class_counts_0_to_5": [
+          1931,
+          1941,
+          1956,
+          1964,
+          1980,
+          1996
+        ],
+        "images": 288,
+        "labels": 288
+      },
+      "train": {
+        "boxes": 35140,
+        "class_counts_0_to_5": [
+          5802,
+          5807,
+          5964,
+          5881,
+          5822,
+          5864
+        ],
+        "images": 864,
+        "labels": 864
+      },
+      "validation_combined": {
+        "boxes": 11879,
+        "class_counts_0_to_5": [
+          1954,
+          1967,
+          1973,
+          1986,
+          1989,
+          2010
+        ],
+        "images": 399,
+        "labels": 399
+      }
+    }
+  },
+  "created_at": "2026-10-10T02:12:26.646904+00:00",
+  "families": {
+    "physical_leaf_family_dhash_adjudicated_05": {
+      "members": [
+        "53c34f9ffeb5d0d4",
+        "3d4f351de1fcddf9"
+      ],
+      "target": "train"
+    },
+    "physical_leaf_family_dhash_adjudicated_06": {
+      "members": [
+        "a6a471f22d35b6d3",
+        "1ee9efbd1d0ad3d3"
+      ],
+      "target": "train"
+    },
+    "physical_leaf_family_dhash_adjudicated_07": {
+      "members": [
+        "e51945c20979062f",
+        "a2490a9e00809393"
+      ],
+      "target": "train"
+    },
+    "physical_leaf_family_dhash_adjudicated_08": {
+      "members": [
+        "442f35563b5faf6a",
+        "4cf638b0162046f3"
+      ],
+      "target": "train"
+    },
+    "physical_leaf_family_healthy_02": {
+      "members": [
+        "2d450613c221929e",
+        "d4bb4426aa289c99"
+      ],
+      "target": "train"
+    },
+    "physical_leaf_family_healthy_03": {
+      "members": [
+        "4fbcc6671d0d91b0",
+        "67b775b6cb283a98"
+      ],
+      "target": "train"
+    },
+    "physical_leaf_family_healthy_04": {
+      "members": [
+        "ea74ad34444ecd65",
+        "105ab8e35982266c"
+      ],
+      "target": "real_dev"
+    },
+    "physical_scene_family_healthy_orchard_01": {
+      "members": [
+        "b7eb80f5cde0f12e",
+        "354e1f71dfec448b",
+        "ca54d2d68e533c8c",
+        "806da87ca44b7ce3",
+        "b0b816dc5e388be9",
+        "986cf1184c8cb597",
+        "603960c0a3d8f150",
+        "1531a2b5b26954b5"
+      ],
+      "target": "train"
+    }
+  },
+  "lineage": [
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_b7eb80f5cde0f12e",
+      "official_filename": "Leaf_Healthy_174.jpg",
+      "official_partition": "train",
+      "official_source_id": "741529e7-2109-47c2-a326-ac3813bdaab8",
+      "source_sha256": "b7eb80f5cde0f12e1cca52419f41110223a560ad53972156d266e77a114a62c9",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "b7eb80f5cde0f12e",
+      "v4_1_digital_source_family_id": "dsf_ae820460888a1fb4",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_354e1f71dfec448b",
+      "official_filename": "Leaf_Healthy_136.jpg",
+      "official_partition": "train",
+      "official_source_id": "9c3db143-371d-49a7-8d07-cf9668b5c092",
+      "source_sha256": "354e1f71dfec448b4da0930f16651f09159b1e5af9388cce37a9799f1199e6c5",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "354e1f71dfec448b",
+      "v4_1_digital_source_family_id": "dsf_c4f0b48f9bd09d55",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_ca54d2d68e533c8c",
+      "official_filename": "Leaf_Healthy_115.jpg",
+      "official_partition": "train",
+      "official_source_id": "8f674052-e5a3-4acc-ac2b-3170c02fc489",
+      "source_sha256": "ca54d2d68e533c8c39087cc7c120c04d246a248a1c24e540c982357f25493542",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "ca54d2d68e533c8c",
+      "v4_1_digital_source_family_id": "dsf_7cb85279a63eefe3",
+      "v4_1_split": "REAL_DEV"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_806da87ca44b7ce3",
+      "official_filename": "Leaf_Healthy_455.jpg",
+      "official_partition": "public_source_test",
+      "official_source_id": "48a2135e-a04b-491e-9afd-6e599cc347ac",
+      "source_sha256": "806da87ca44b7ce399c866880e26e8eaf6a106808c6b4e3d329fe053a0232186",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "806da87ca44b7ce3",
+      "v4_1_digital_source_family_id": "dsf_e9663e403ba33b54",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_b0b816dc5e388be9",
+      "official_filename": "Leaf_Healthy_130.jpg",
+      "official_partition": "train",
+      "official_source_id": "3554006f-0a7c-4bae-83d2-5300f238f57e",
+      "source_sha256": "b0b816dc5e388be9d4119436569e80b02896323f26210b7dac5e3ae4243398f4",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "b0b816dc5e388be9",
+      "v4_1_digital_source_family_id": "dsf_6739be5178e5febb",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_986cf1184c8cb597",
+      "official_filename": "Leaf_Healthy_132.jpg",
+      "official_partition": "train",
+      "official_source_id": "c77fddfb-8014-40b5-a750-4dc3a0797d6b",
+      "source_sha256": "986cf1184c8cb5976aea202333983e9becee9170f0d3dd468f8a931aa5e28d84",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "986cf1184c8cb597",
+      "v4_1_digital_source_family_id": "dsf_a82764d8bb203b74",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_603960c0a3d8f150",
+      "official_filename": "Leaf_Healthy_392.jpg",
+      "official_partition": "train",
+      "official_source_id": "f6ea5f4d-4d56-4abc-9267-79602c13e6c1",
+      "source_sha256": "603960c0a3d8f150832a0557073c3eb67661f76e1fe0c3a8aa24e409f6ffb809",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "603960c0a3d8f150",
+      "v4_1_digital_source_family_id": "dsf_5a12e0d25dad2aa8",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_scene_family_healthy_orchard_01",
+      "image_id": "real_v4_1_1531a2b5b26954b5",
+      "official_filename": "Leaf_Healthy_459.jpg",
+      "official_partition": "train",
+      "official_source_id": "0482418c-a57e-44a8-8387-8e0bce0a273b",
+      "source_sha256": "1531a2b5b26954b5b8caac83991e8f122e2b15aae36213ada311b0a92e9c0d09",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "1531a2b5b26954b5",
+      "v4_1_digital_source_family_id": "dsf_9d564cf4ff2462df",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_healthy_02",
+      "image_id": "real_v4_1_2d450613c221929e",
+      "official_filename": "Leaf_Healthy_416.jpg",
+      "official_partition": "val",
+      "official_source_id": "1ed49639-64c7-43d3-9672-e581d4327e24",
+      "source_sha256": "2d450613c221929eb70732f1b81b0c50af81d32ed3bd53cc44ea94d87096b3a1",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "2d450613c221929e",
+      "v4_1_digital_source_family_id": "dsf_8d471785a9f502b5",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_healthy_02",
+      "image_id": "real_v4_1_d4bb4426aa289c99",
+      "official_filename": "Leaf_Healthy_265.jpg",
+      "official_partition": "val",
+      "official_source_id": "6b24002c-4f37-4bd0-b53b-3f2c90a1a969",
+      "source_sha256": "d4bb4426aa289c99a2a7a210d817d1e29e7cac8d4857ecd93f337a44e1ef935a",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "d4bb4426aa289c99",
+      "v4_1_digital_source_family_id": "dsf_a7884b32377608bd",
+      "v4_1_split": "REAL_DEV"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_healthy_03",
+      "image_id": "real_v4_1_4fbcc6671d0d91b0",
+      "official_filename": "Leaf_Healthy_379.jpg",
+      "official_partition": "val",
+      "official_source_id": "1d2c39d6-9570-4f18-9f3d-8955ee590e78",
+      "source_sha256": "4fbcc6671d0d91b0aac57bab5763854d64b39d560d133a6fb135ec578cd70f07",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "4fbcc6671d0d91b0",
+      "v4_1_digital_source_family_id": "dsf_69ea3b29313db94a",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_healthy_03",
+      "image_id": "real_v4_1_67b775b6cb283a98",
+      "official_filename": "Leaf_Healthy_263.jpg",
+      "official_partition": "train",
+      "official_source_id": "65093afa-1175-498d-852b-fd81aa95ce24",
+      "source_sha256": "67b775b6cb283a98797ac14fb732f67c036fbb2ce28a924d6d4abfa5c7a0ca37",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "67b775b6cb283a98",
+      "v4_1_digital_source_family_id": "dsf_626627e87fde8550",
+      "v4_1_split": "REAL_DEV"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_healthy_04",
+      "image_id": "real_v4_1_ea74ad34444ecd65",
+      "official_filename": "Leaf_Healthy_251.jpg",
+      "official_partition": "train",
+      "official_source_id": "c45b1f72-a06a-49e5-af00-c24a22aed553",
+      "source_sha256": "ea74ad34444ecd6576291d6279090c751496b8e8888e469ac68ed46aa98d2b17",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "real_dev",
+      "token": "ea74ad34444ecd65",
+      "v4_1_digital_source_family_id": "dsf_a72340fdc21bf23f",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_healthy_04",
+      "image_id": "real_v4_1_105ab8e35982266c",
+      "official_filename": "Leaf_Healthy_268.jpg",
+      "official_partition": "train",
+      "official_source_id": "a454e0b7-d07e-4e91-9238-287a539f178e",
+      "source_sha256": "105ab8e35982266c83a43fed962f29ec8ad09dfd5ad1cb6f45954fe4b1467a3f",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "real_dev",
+      "token": "105ab8e35982266c",
+      "v4_1_digital_source_family_id": "dsf_9ae75daca1c0f1b4",
+      "v4_1_split": "REAL_DEV"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_dhash_adjudicated_05",
+      "image_id": "real_v4_1_53c34f9ffeb5d0d4",
+      "official_filename": "Leaf_Healthy_149.jpg",
+      "official_partition": "train",
+      "official_source_id": "4cd8291d-3b43-4611-95ec-47a05b8a4398",
+      "source_sha256": "53c34f9ffeb5d0d4c6596234c5c568689e2fb2f697d72be8d2ecf8720b98fd20",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "53c34f9ffeb5d0d4",
+      "v4_1_digital_source_family_id": "dsf_faf07ca8410f1fcc",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_dhash_adjudicated_05",
+      "image_id": "real_v4_1_3d4f351de1fcddf9",
+      "official_filename": "Leaf_Healthy_86.jpg",
+      "official_partition": "train",
+      "official_source_id": "32f30024-7419-46aa-9f69-e4d8769a5c59",
+      "source_sha256": "3d4f351de1fcddf9afc0694e309b20bf597da64488997592902e3815bf53eaac",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "3d4f351de1fcddf9",
+      "v4_1_digital_source_family_id": "dsf_81885225b67f26a2",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_dhash_adjudicated_06",
+      "image_id": "real_v4_1_a6a471f22d35b6d3",
+      "official_filename": "Leaf_Healthy_310.jpg",
+      "official_partition": "train",
+      "official_source_id": "8cfa2b03-3479-451e-9b12-52147c5000d0",
+      "source_sha256": "a6a471f22d35b6d358aa8f86473f6030c7bb19f1d46d1c45c0fa142a8a31f786",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "a6a471f22d35b6d3",
+      "v4_1_digital_source_family_id": "dsf_2c5f5033d1ad3631",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_dhash_adjudicated_06",
+      "image_id": "real_v4_1_1ee9efbd1d0ad3d3",
+      "official_filename": "Leaf_Healthy_198.jpg",
+      "official_partition": "train",
+      "official_source_id": "84898d3f-abe4-46d6-986c-78f702a56d80",
+      "source_sha256": "1ee9efbd1d0ad3d36be3ba3186408911d830d5de3d20ec9d7759fb5c8cfa525d",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "1ee9efbd1d0ad3d3",
+      "v4_1_digital_source_family_id": "dsf_bc25be863ad1034e",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_dhash_adjudicated_07",
+      "image_id": "real_v4_1_e51945c20979062f",
+      "official_filename": "Leaf_Healthy_385.jpg",
+      "official_partition": "val",
+      "official_source_id": "7c8e1110-b9fb-487b-b04b-e0a7ee3af47f",
+      "source_sha256": "e51945c20979062f4666f1ca88ba7bdb3556da4658842888875b5c474609d282",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "e51945c20979062f",
+      "v4_1_digital_source_family_id": "dsf_4602034cb1dbbbae",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 3,
+      "class_name": "leaf_healthy",
+      "family_id": "physical_leaf_family_dhash_adjudicated_07",
+      "image_id": "real_v4_1_a2490a9e00809393",
+      "official_filename": "Leaf_Healthy_298.jpg",
+      "official_partition": "public_source_test",
+      "official_source_id": "402c784a-6098-40f5-98c5-ce363fa95548",
+      "source_sha256": "a2490a9e0080939323f269ae608d059a04567a5cf2b359119e6bf1874490796c",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "a2490a9e00809393",
+      "v4_1_digital_source_family_id": "dsf_eabaef63bcea807a",
+      "v4_1_split": "REAL_VAL"
+    },
+    {
+      "class_id": 1,
+      "class_name": "leaf_blight",
+      "family_id": "physical_leaf_family_dhash_adjudicated_08",
+      "image_id": "real_v4_1_442f35563b5faf6a",
+      "official_filename": "Leaf_Blight_95.jpg",
+      "official_partition": "train",
+      "official_source_id": "d8392520-cabf-4eb6-8b1b-399354ff67df",
+      "source_sha256": "442f35563b5faf6adb0ae42921a12e4396d93833975bd9ce4b86a02d0e2c8304",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "442f35563b5faf6a",
+      "v4_1_digital_source_family_id": "dsf_46e9254c8288eaa8",
+      "v4_1_split": "REAL_TRAIN"
+    },
+    {
+      "class_id": 1,
+      "class_name": "leaf_blight",
+      "family_id": "physical_leaf_family_dhash_adjudicated_08",
+      "image_id": "real_v4_1_4cf638b0162046f3",
+      "official_filename": "Leaf_Blight_122.jpg",
+      "official_partition": "val",
+      "official_source_id": "85764da2-ed1f-4ccc-8ff1-c64f9ac49de5",
+      "source_sha256": "4cf638b0162046f3dfda2dd22ec7c6f1f0cf6974ec7f4021c82ae6f4cc77558a",
+      "source_url": "https://data.mendeley.com/datasets/pxzvksbwnj/4",
+      "target_split": "train",
+      "token": "4cf638b0162046f3",
+      "v4_1_digital_source_family_id": "dsf_9953f1b77e87b462",
+      "v4_1_split": "REAL_DEV"
+    }
+  ],
+  "schema_version": "durian.dataset.v4.2.leakage_correction.v1",
+  "sealed_test_accessed": false,
+  "source_dataset": "experiment/final_cross_domain_study/durian_v4_1_8run_final",
+  "source_dataset_hash_manifest_sha256": "d57db1b3bbfc3184e458e0d79df66cd87038e2eb42264d95458fc191d6a9b22f",
+  "target_dataset": "experiment/final_cross_domain_study/durian_v4_2_8run_ready",
+  "training_started": false
+}

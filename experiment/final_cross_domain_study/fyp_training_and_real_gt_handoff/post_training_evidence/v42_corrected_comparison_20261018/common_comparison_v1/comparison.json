@@ -1,0 +1,72 @@
+{
+  "automatic_selection_disabled": true,
+  "decision": "REQUIRES_FROZEN_TRANSPARENT_DEPLOYMENT_DECISION_MATRIX",
+  "deployment_run": null,
+  "leaderboard": [
+    {
+      "architecture": "YOLO26n-P2",
+      "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+      "condition": "hybrid_v4_2_corrected",
+      "fairness_label": "V4_2_HYBRID_EFFECTIVE_CONFIG_DOCUMENTED",
+      "real_dev_map50_95": null,
+      "run_id": "Run04",
+      "synthetic_dev_map50_95": 0.561268650719217,
+      "threshold": 0.45
+    },
+    {
+      "architecture": "YOLO26n",
+      "checkpoint_sha256": "85cb301538b2c8ccb06b714337391698771afa569efce93c448415e845b428fd",
+      "condition": "hybrid_v4_2_corrected",
+      "fairness_label": "V4_2_HYBRID_EFFECTIVE_CONFIG_DEVIATES_FROM_FROZEN_NBS_AND_PATIENCE",
+      "real_dev_map50_95": null,
+      "run_id": "Run02",
+      "synthetic_dev_map50_95": 0.5454782310145355,
+      "threshold": 0.4
+    },
+    {
+      "architecture": "YOLO26n",
+      "checkpoint_sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+      "condition": "synthetic_only",
+      "fairness_label": "V4_1_SYNTHETIC_RETAINED_REEVALUATED_ON_COMMON_V4_2_COHORTS",
+      "real_dev_map50_95": null,
+      "run_id": "Run01",
+      "synthetic_dev_map50_95": 0.5193146970824836,
+      "threshold": 0.4
+    },
+    {
+      "architecture": "YOLO26n-P2",
+      "checkpoint_sha256": "a8ae50bfea646f34849961be3204b9860dcf7c7e87de159498c7b59872fd369d",
+      "condition": "synthetic_only",
+      "fairness_label": "V4_1_SYNTHETIC_RETAINED_REEVALUATED_ON_COMMON_V4_2_COHORTS",
+      "real_dev_map50_95": null,
+      "run_id": "Run03",
+      "synthetic_dev_map50_95": 0.5133233331727486,
+      "threshold": 0.45
+    },
+    {
+      "architecture": "RF-DETR Nano",
+      "checkpoint_sha256": "b333edab9b69d7c85c6405fa468ad767c820adbe12825bcdf661dc5aa069c266",
+      "condition": "hybrid_v4_2_corrected",
+      "fairness_label": "V4_2_HYBRID_LAST_RUNTIME_STAGE_BEST_GLOBAL_BEST_UNVERIFIED",
+      "real_dev_map50_95": null,
+      "run_id": "Run06",
+      "synthetic_dev_map50_95": 0.5002952791638655,
+      "threshold": 0.5
+    },
+    {
+      "architecture": "RF-DETR Nano",
+      "checkpoint_sha256": "f2912b418819bc6732958f103b07708c95e3bad15219e5cbcc9f0bccda7ef744",
+      "condition": "synthetic_only",
+      "fairness_label": "V4_1_SYNTHETIC_RETAINED_REEVALUATED_ON_COMMON_V4_2_COHORTS",
+      "real_dev_map50_95": null,
+      "run_id": "Run05",
+      "synthetic_dev_map50_95": 0.4955588377706445,
+      "threshold": 0.45
+    }
+  ],
+  "real_scoring_performed": false,
+  "run_count": 6,
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "winner": null
+}

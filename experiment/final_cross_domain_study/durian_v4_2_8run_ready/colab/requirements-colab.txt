@@ -1,0 +1,7 @@
+ultralytics==8.4.152
+rfdetr[train]==1.11.0
+PyYAML>=6.0,<7
+pytorch-lightning==2.6.6
+transformers==5.17.0
+onnx==1.20.1
+onnxruntime-gpu==1.23.2

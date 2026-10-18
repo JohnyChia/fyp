@@ -1,0 +1,28 @@
+{
+  "active_config_sha256": "28f157300d187ad63e57a1658fca3cfd020c02647bc402b5db3c3cb376152005",
+  "backend": "fyp_run01",
+  "checkpoint_sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+  "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+  "database": {
+    "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_production_promotion_20261018/rollback_load_smoke/run01_rollback_load.db",
+    "sha256": "3cd8635d55bfb3d3aa6595441bcc1d0d2bd7630a34da8324e678b999d56968a6"
+  },
+  "detection_counts": [
+    5,
+    5
+  ],
+  "device_policy": "cuda_required",
+  "inference_runs": 2,
+  "latency_ms": [
+    6703.006213,
+    71.244726
+  ],
+  "log": {
+    "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_production_promotion_20261018/rollback_load_smoke/run01_rollback_load.log",
+    "sha256": "db07cd9516b3c36f6dddc8fae55b112b31b7f06281e26cae45a05468fc51e67b"
+  },
+  "schema_version": "durian.run01.rollback_load_verification.v1",
+  "sealed_test_accessed": false,
+  "status": "PASS",
+  "threshold": 0.4
+}

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="460" viewBox="0 0 980 460">
+<rect width="100%" height="100%" fill="white"/>
+<style>text{font-family:DejaVu Sans,Arial,sans-serif;fill:#1f2937}.title{font-size:20px;font-weight:700}.label{font-size:13px}.value{font-size:12px}.note{font-size:11px;fill:#4b5563}</style>
+<text x="30" y="34" class="title">Six-model permitted-cohort comparison (mAP50-95)</text>
+<text x="30" y="55" class="note">Blue: Synthetic/Gazebo Dev; orange: AI-assisted Real HIGH/MODERATE (not expert GT)</text>
+<text x="30" y="105" class="label">Run01 YOLO26n</text>
+<rect x="205" y="88" width="363.52" height="22" rx="2" fill="#2563eb"/>
+<text x="575.52" y="104" class="value">0.5193</text>
+<rect x="205" y="113" width="6.38" height="22" rx="2" fill="#f97316"/>
+<text x="218.38" y="129" class="value">0.0091</text>
+<text x="30" y="161" class="label">Run02 YOLO26n</text>
+<rect x="205" y="144" width="381.83" height="22" rx="2" fill="#2563eb"/>
+<text x="593.83" y="160" class="value">0.5455</text>
+<rect x="205" y="169" width="171.81" height="22" rx="2" fill="#f97316"/>
+<text x="383.81" y="185" class="value">0.2454</text>
+<text x="30" y="217" class="label">Run03 YOLO26n-P2</text>
+<rect x="205" y="200" width="359.33" height="22" rx="2" fill="#2563eb"/>
+<text x="571.33" y="216" class="value">0.5133</text>
+<rect x="205" y="225" width="16.52" height="22" rx="2" fill="#f97316"/>
+<text x="228.52" y="241" class="value">0.0236</text>
+<text x="30" y="273" class="label">Run04 YOLO26n-P2</text>
+<rect x="205" y="256" width="392.89" height="22" rx="2" fill="#2563eb"/>
+<text x="604.89" y="272" class="value">0.5613</text>
+<rect x="205" y="281" width="168.63" height="22" rx="2" fill="#f97316"/>
+<text x="380.63" y="297" class="value">0.2409</text>
+<text x="30" y="329" class="label">Run05 RF-DETR Nano</text>
+<rect x="205" y="312" width="346.89" height="22" rx="2" fill="#2563eb"/>
+<text x="558.89" y="328" class="value">0.4956</text>
+<rect x="205" y="337" width="43.33" height="22" rx="2" fill="#f97316"/>
+<text x="255.33" y="353" class="value">0.0619</text>
+<text x="30" y="385" class="label">Run06 RF-DETR Nano</text>
+<rect x="205" y="368" width="350.21" height="22" rx="2" fill="#2563eb"/>
+<text x="562.21" y="384" class="value">0.5003</text>
+<rect x="205" y="393" width="168.18" height="22" rx="2" fill="#f97316"/>
+<text x="380.18" y="409" class="value">0.2403</text>
+<text x="30" y="438" class="note">Run04 is the engineering leader; deployment switch remains BLOCKED pending exact-SHA CUDA ROS2/Gazebo E2E.</text>
+</svg>

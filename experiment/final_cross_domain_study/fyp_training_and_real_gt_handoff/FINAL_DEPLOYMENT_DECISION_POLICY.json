@@ -1,0 +1,31 @@
+{
+  "schema_version": "durian.deployment_decision_policy.v1",
+  "status": "FROZEN",
+  "frozen_before_sealed_test": true,
+  "automatic_hidden_weighted_score": false,
+  "final_selection_requires_eligible_real_scoring": true,
+  "eligibility": {
+    "ros2_end_to_end_pass": true,
+    "non_finite_output_count_max": 0,
+    "coordinate_violation_count_max": 0,
+    "repeated_inference_mismatch_count_max": 0
+  },
+  "lexicographic_order": [
+    {"metric": "real_dev_map50_95", "direction": "descending"},
+    {"metric": "synthetic_dev_map50_95", "direction": "descending"},
+    {"metric": "perturbation_retention", "direction": "descending"},
+    {"metric": "calibration_ece", "direction": "ascending"},
+    {"metric": "cpu_p90_latency_ms", "direction": "ascending"},
+    {"metric": "peak_rss_mb", "direction": "ascending"}
+  ],
+  "tie_policy": "If all declared metrics are exactly equal, report an unresolved tie; do not choose by run name.",
+  "reporting": {
+    "engineering_table_includes_all_frozen_runs": true,
+    "fairness_label_required": true,
+    "controlled_primary_contrast": null,
+    "lineage_caveated_contrast": "Run05-Run06 (descriptive only; Run06 is V4.1 Hybrid exposure-biased)",
+    "cancelled_not_trained_runs": ["Run07", "Run08"],
+    "historical_biased_runs": ["Run02", "Run04", "Run06"]
+  },
+  "sealed_test_accessed": false
+}

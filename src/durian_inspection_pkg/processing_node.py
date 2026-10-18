@@ -18,25 +18,70 @@ import queue
 import tf2_ros
 import tf2_geometry_msgs
 from geometry_msgs.msg import PointStamped, PoseStamped, TransformStamped
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from std_msgs.msg import String
 from durian_message.srv import TreeStatus
 from std_srvs.srv import Trigger
-from observation_store import connect
+from observation_store import connect, missing_required_capture_transforms
+from checkpoint_manifest import load_checkpoint_manifest
+from deployment_fingerprint import (
+    build_pipeline_fingerprint,
+    deployment_fingerprint_inputs,
+)
+from leaf_deployment_config import load_deployment_config
+from leaf_backend_runtime import LeafBackendClient, LeafBackendSpec
+from canonical_leaf_classes import CANONICAL_CLASS_NAMES, canonical_class_id
+from leaf_association import (
+    AssociationPolicy,
+    AssociationPolicyUnfrozen,
+    Detection3D,
+    aggregate_tree,
+    associate_unique_leaves,
+    project_pixel,
+    robust_center_depth,
+    transform_point,
+)
+from unknown_outcomes import UnknownReason
+from multi_frame_policy import (
+    FrameDetectionEvidence,
+    TemporalPolicy,
+    aggregate_temporal_multi_view,
+)
+
+
+def _legacy_leaf_result_name(canonical_name):
+    """Translate canonical storage names to the existing ROS result spelling."""
+    return "_".join(part.capitalize() for part in canonical_name.split("_"))
 
 class ProcessingNode(Node):
     def log_diagnostic(self, msg):
-        self.get_logger().info(msg)
+        if getattr(self, 'diagnostic_logging_enabled', False):
+            self.get_logger().info(msg)
+
+    def save_diagnostic_image(self, path, image):
+        if not getattr(self, 'diagnostic_artifacts_enabled', False):
+            return True
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        return cv2.imwrite(path, image)
 
     def __init__(self):
         os.environ["LD_LIBRARY_PATH"] = "/usr/local/cuda/lib64:" + os.environ.get("LD_LIBRARY_PATH", "")
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
         super().__init__('processing_node')
+        self.declare_parameter('diagnostic_logging_enabled', False)
+        self.declare_parameter('diagnostic_artifacts_enabled', False)
+        self.diagnostic_logging_enabled = bool(
+            self.get_parameter('diagnostic_logging_enabled').value
+        )
+        self.diagnostic_artifacts_enabled = bool(
+            self.get_parameter('diagnostic_artifacts_enabled').value
+        )
         self.models_ready = False
         self.declare_parameter("model_tree_path", "/home/johny/durian_ws/models/durian_tree/best_tree_hybrid_v2.pt")
         self.declare_parameter("model_fruit_path", "/home/johny/durian_ws/models/durian/best_v8.pt")
-        self.declare_parameter("model_leaf_path", "/home/johny/durian_ws/experiment/outputs/production_efficientnet/weights/best.pt")
-        self.declare_parameter('leaf_inference_scales', [1024, 768, 512])
+        self.declare_parameter('leaf_deployment_config_path', '')
         self.declare_parameter('leaf_roi_context_scale', 1.5)
         self.declare_parameter('leaf_roi_unreliable_context_scale', 1.25)
         self.declare_parameter('leaf_roi_max_area_ratio', 0.85)
@@ -51,17 +96,27 @@ class ProcessingNode(Node):
             'd197': {'name': 'Durian 197', 'is_disease': False},
             'd2':   {'name': 'Durian 2', 'is_disease': False},
             'd24':  {'name': 'Durian 24', 'is_disease': False},
-            'Leaf_Algal':           {'name': 'Algal Spot', 'remedy': 'Copper-based', 'severity': 0.4},
-            'Leaf_Blight':          {'name': 'Blight', 'remedy': 'Difenoconazole', 'severity': 0.8},
-            'Leaf_Colletotrichum':  {'name': 'Anthracnose', 'remedy': 'Azoxystrobin', 'severity': 0.6},
-            'Leaf_Healthy':         {'name': 'Healthy', 'remedy': 'None', 'severity': 0.0},
-            'Leaf_Phomopsis':       {'name': 'Phomopsis', 'remedy': 'Carbendazim', 'severity': 0.7},
-            'Leaf_Rhizoctonia':     {'name': 'Rhizoctonia', 'remedy': 'Jinggangmycin', 'severity': 0.8}
         }
+        leaf_metadata = (
+            {'name': 'Algal Spot', 'remedy': 'Copper-based', 'severity': 0.4, 'priority': 'Medium'},
+            {'name': 'Blight', 'remedy': 'Difenoconazole', 'severity': 0.8, 'priority': 'High'},
+            {'name': 'Anthracnose', 'remedy': 'Azoxystrobin', 'severity': 0.6, 'priority': 'Medium'},
+            {'name': 'Healthy', 'remedy': 'None', 'severity': 0.0, 'priority': 'None'},
+            {'name': 'Phomopsis', 'remedy': 'Carbendazim', 'severity': 0.7, 'priority': 'Low'},
+            {'name': 'Rhizoctonia', 'remedy': 'Jinggangmycin', 'severity': 0.8, 'priority': 'High'},
+        )
+        self.tree_config.update({
+            _legacy_leaf_result_name(canonical_name): metadata
+            for canonical_name, metadata in zip(
+                CANONICAL_CLASS_NAMES, leaf_metadata, strict=True
+            )
+        })
         self.durian_type = {0: 'd101', 1: 'd175', 2: 'd197', 3: 'd2', 4: 'd24'}
         self.severity_map = {
-            'Leaf_Healthy': 0.0, 'Leaf_Algal': 0.4, 'Leaf_Blight': 0.8,
-            'Leaf_Colletotrichum': 0.6, 'Leaf_Phomopsis': 0.7, 'Leaf_Rhizoctonia': 0.8
+            _legacy_leaf_result_name(canonical_name): metadata['severity']
+            for canonical_name, metadata in zip(
+                CANONICAL_CLASS_NAMES, leaf_metadata, strict=True
+            )
         }
         self.calibrate_colors()
         self.models_ready = False
@@ -72,7 +127,8 @@ class ProcessingNode(Node):
         self.scan_target_map_y = 0.0
         self.model_tree = None
         self.model_fruit = None
-        self.model_leaf = None
+        self.leaf_backend = None
+        self.leaf_backend_spec = None
         self.transform = None
         self.latest_depth_frame = None
         self.latest_depth_stamp = None
@@ -86,6 +142,8 @@ class ProcessingNode(Node):
         self.next_tree_id = 0
         self.camera_info_msg = None
         self.gpu_lock = threading.Lock()
+        self.state_lock = threading.RLock()
+        self.current_inspection_id = None
         self.tree_roi_cache = {}
         self.MAX_SCAN_ROI_AGE = 10.0
 
@@ -121,10 +179,18 @@ class ProcessingNode(Node):
             Trigger, 'process_captured_images', self.handle_process_captured,
             callback_group=srv_cb_group
         )
+        inspection_qos = QoSProfile(
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            depth=1,
+        )
+        self.inspection_id_sub = self.create_subscription(
+            String, '/inspection_id', self.inspection_id_callback,
+            inspection_qos, callback_group=srv_cb_group
+        )
         self.last_detected_tree = {}
 
         self.scan_epoch = 0
-        self.state_lock = threading.RLock()
 
         self.tree_pose_pub = self.create_publisher(PoseStamped, '/discovered_tree_pose', 10)
         self.db_path = os.path.abspath(str(self.get_parameter('database_path').value))
@@ -134,7 +200,41 @@ class ProcessingNode(Node):
         os.makedirs(self.debug_root, exist_ok=True)
         with connect(self.db_path):
             pass
+        self.leaf_backend_spec = LeafBackendSpec.from_config(
+            str(self.get_parameter('leaf_deployment_config_path').value)
+        )
+        deployment_config = load_deployment_config(
+            str(self.get_parameter('leaf_deployment_config_path').value)
+        )
+        self.association_policy = AssociationPolicy.from_mapping(
+            deployment_config['multi_frame']['same_leaf_association']
+        )
+        self.primary_aggregation_mode = deployment_config['multi_frame']['primary_aggregation']
+        self.temporal_policy = TemporalPolicy.from_mapping(
+            deployment_config['multi_frame']['temporal_sampling']
+        )
+        self.required_viewpoint_ids = tuple(
+            f"view_{index:03d}"
+            for index, _ in enumerate(deployment_config['inspection_policy']['angular_offsets_deg'])
+        )
+        self.experiment_version = deployment_config['experiment_context']['version']
+        self.world_path = deployment_config['experiment_context']['world_path']
+        self.world_sha256 = self._sha256_file(self.world_path)
+        self.frame_fallback_enabled = bool(
+            deployment_config['multi_frame']['fallback']['enabled']
+        )
+        self._last_tree_outcome = None
         self.pipeline_fingerprint = self._pipeline_fingerprint()
+        self.get_logger().info(
+            "Leaf backend configured: "
+            f"backend={self.leaf_backend_spec.name} "
+            f"framework={self.leaf_backend_spec.framework} "
+            f"checkpoint={self.leaf_backend_spec.checkpoint} "
+            f"checkpoint_sha256={self.leaf_backend_spec.checkpoint_sha256} "
+            f"threshold={self.leaf_backend_spec.threshold:.4f} "
+            f"native_resolution={self.leaf_backend_spec.native_resolution} "
+            f"pipeline_fingerprint={self.pipeline_fingerprint}"
+        )
         self.get_logger().info('Deferred processing node ready')
 
     @staticmethod
@@ -149,18 +249,34 @@ class ProcessingNode(Node):
             return f'missing:{path}'
 
     def _pipeline_fingerprint(self):
-        parts = [
-            'legacy-vision-pipeline-v1',
-            self._sha256_file(str(self.get_parameter('model_tree_path').value)),
-            self._sha256_file(str(self.get_parameter('model_fruit_path').value)),
-            self._sha256_file(str(self.get_parameter('model_leaf_path').value)),
-            repr(self.get_parameter('leaf_inference_scales').value),
-            repr(self.get_parameter('leaf_roi_context_scale').value),
-            repr(self.get_parameter('leaf_roi_unreliable_context_scale').value),
-            repr(self.get_parameter('leaf_roi_max_area_ratio').value),
-            repr(self.get_parameter('leaf_roi_min_size').value),
-        ]
-        return hashlib.sha256('|'.join(parts).encode('utf-8')).hexdigest()
+        config = load_deployment_config(
+            str(self.get_parameter('leaf_deployment_config_path').value)
+        )
+        selected_backend = config['leaf_detector']['backend']
+        selected_profile = config['leaf_detector']['profiles'][selected_backend]
+        manifest = load_checkpoint_manifest(selected_profile['manifest'])
+        inputs = deployment_fingerprint_inputs(config, manifest)
+        inputs.update({
+            'current_tree_checkpoint_sha256': self._sha256_file(
+                str(self.get_parameter('model_tree_path').value)
+            ),
+            'current_fruit_checkpoint_sha256': self._sha256_file(
+                str(self.get_parameter('model_fruit_path').value)
+            ),
+            'leaf_roi': {
+                'context_scale': self.get_parameter(
+                    'leaf_roi_context_scale'
+                ).value,
+                'unreliable_context_scale': self.get_parameter(
+                    'leaf_roi_unreliable_context_scale'
+                ).value,
+                'max_area_ratio': self.get_parameter(
+                    'leaf_roi_max_area_ratio'
+                ).value,
+                'min_size': self.get_parameter('leaf_roi_min_size').value,
+            },
+        })
+        return build_pipeline_fingerprint(inputs)
 
     @staticmethod
     def _transform_from_dict(data):
@@ -211,8 +327,19 @@ class ProcessingNode(Node):
         inverse.transform.rotation.w = w
         return inverse
 
+    def inspection_id_callback(self, msg):
+        inspection_id = msg.data.strip()
+        with self.state_lock:
+            self.current_inspection_id = inspection_id or None
+
     def handle_process_captured(self, request, response):
         del request
+        with self.state_lock:
+            inspection_id = self.current_inspection_id
+        if not inspection_id:
+            response.success = False
+            response.message = 'No active inspection ID; refusing unscoped processing'
+            return response
         if not self.models_ready:
             self.load_all_models()
         if not self.models_ready:
@@ -221,21 +348,34 @@ class ProcessingNode(Node):
             return response
         self.pipeline_fingerprint = self._pipeline_fingerprint()
         try:
-            completed, cache_hits = self.process_pending_trees()
+            completed, cache_hits = self.process_pending_trees(inspection_id)
             response.success = True
-            response.message = f'completed={completed}, cache_hits={cache_hits}'
+            response.message = (
+                f'inspection_id={inspection_id}, completed={completed}, '
+                f'cache_hits={cache_hits}'
+            )
         except Exception as exc:
             self.get_logger().error(f'Deferred processing failed: {exc}\n{traceback.format_exc()}')
             response.success = False
             response.message = str(exc)
         return response
 
-    def process_pending_trees(self):
+    def process_pending_trees(self, inspection_id):
         with connect(self.db_path) as conn:
+            row_count = conn.execute(
+                "SELECT COUNT(*) FROM inspection_log WHERE inspection_id=?",
+                (inspection_id,),
+            ).fetchone()[0]
+            if row_count == 0:
+                raise RuntimeError(
+                    f'no inspection rows found for inspection_id={inspection_id}'
+                )
             pending = conn.execute(
                 """SELECT inspection_id, tree_id, tree_x, tree_y
-                   FROM inspection_log WHERE status='processing'
-                   ORDER BY id"""
+                   FROM inspection_log
+                   WHERE status='processing' AND inspection_id=?
+                   ORDER BY id""",
+                (inspection_id,),
             ).fetchall()
         completed = 0
         cache_hits = 0
@@ -257,6 +397,17 @@ class ProcessingNode(Node):
                            WHERE inspection_id=? AND tree_id=? AND status='processing'""",
                         (str(exc), inspection_id, tree_id),
                     )
+        with connect(self.db_path) as conn:
+            remaining = conn.execute(
+                """SELECT COUNT(*) FROM inspection_log
+                   WHERE inspection_id=? AND status='processing'""",
+                (inspection_id,),
+            ).fetchone()[0]
+        if remaining:
+            raise RuntimeError(
+                f'{remaining} tree result(s) remain processing for '
+                f'inspection_id={inspection_id}'
+            )
         return completed, cache_hits
 
     def _process_tree_observations(self, inspection_id, tree_id, tree_x, tree_y):
@@ -304,16 +455,21 @@ class ProcessingNode(Node):
         with connect(self.db_path) as conn:
             cached = conn.execute(
                 """SELECT source_inspection_id, disease_name, coverage, confidence,
-                          priority, remedy
+                          priority, remedy,
+                          aggregation_mode, unknown_reason, viewpoint_count,
+                          valid_viewpoint_count, sampled_frame_count
                    FROM tree_processing_cache
                    WHERE batch_sha256=? AND pipeline_fingerprint=?""",
                 (batch_hash, self.pipeline_fingerprint),
             ).fetchone()
         if cached:
-            source, disease, coverage, confidence, priority, remedy = cached
+            (source, disease, coverage, confidence, priority, remedy,
+             aggregation_mode, unknown_reason, viewpoint_count,
+             valid_viewpoint_count, sampled_frame_count) = cached
             self._complete_tree(
                 inspection_id, tree_id, disease, coverage, confidence,
-                priority, remedy, True, source
+                priority, remedy, True, source, aggregation_mode, unknown_reason,
+                viewpoint_count, valid_viewpoint_count, sampled_frame_count,
             )
             with connect(self.db_path) as conn:
                 conn.execute(
@@ -341,9 +497,12 @@ class ProcessingNode(Node):
             }
             self.scan_disease_votes[(epoch, tree_id)] = {
                 'epoch': epoch, 'target_id': tree_id, 'counts': {}, 'conf_sum': {},
-                'total_crops': 0, 'yolo_frames': 0, 'valid_frames': 0,
+                'coverage_sum': {},
+                'total_crops': 0, 'leaf_detection_frames': 0, 'valid_frames': 0,
                 'rejected_frames': 0, 'sum_raw_conf': 0.0,
                 'max_raw_conf': 0.0, 'max_valid_conf': 0.0,
+                'association_detections': [], 'backend_detection_count': 0,
+                'temporal_frames': {},
             }
 
         output_dir = os.path.join(self.processed_root, inspection_id, str(tree_id))
@@ -365,6 +524,26 @@ class ProcessingNode(Node):
                     raise IOError('depth SHA-256 mismatch')
                 with open(metadata_path, encoding='utf-8') as stream:
                     metadata = json.load(stream)
+                missing_transforms = missing_required_capture_transforms(metadata)
+                if missing_transforms:
+                    reason = (
+                        'MISSING_CAPTURE_TRANSFORM: '
+                        + ','.join(missing_transforms)
+                    )
+                    with connect(self.db_path) as conn:
+                        conn.execute(
+                            """UPDATE captured_observations
+                               SET status='SKIPPED_TF_UNAVAILABLE',
+                                   processing_error=?,
+                                   processed_at=CURRENT_TIMESTAMP
+                               WHERE observation_id=?""",
+                            (reason, observation_id),
+                        )
+                    self.get_logger().warning(
+                        f'Observation excluded from offline processing: '
+                        f'observation_id={observation_id} reason={reason}'
+                    )
+                    continue
                 self._load_observation_context(metadata, depth)
                 stamp_ns = int(float(metadata['rgb']['timestamp']) * 1_000_000_000)
                 stamp = rclpy.time.Time(nanoseconds=stamp_ns).to_msg()
@@ -403,27 +582,42 @@ class ProcessingNode(Node):
             evidence = dict(self.scan_disease_votes.get((epoch, tree_id), {}))
             evidence['counts'] = dict(evidence.get('counts', {}))
             evidence['conf_sum'] = dict(evidence.get('conf_sum', {}))
+            evidence['coverage_sum'] = dict(evidence.get('coverage_sum', {}))
+            evidence['temporal_frames'] = dict(
+                evidence.get('temporal_frames', {})
+            )
         request = TreeStatus.Request()
         request.tree_id = str(tree_id)
         result = self.handle_get_status(request, TreeStatus.Response())
+        outcome = self._last_tree_outcome or {}
         self._complete_tree(
             inspection_id, tree_id, result.disease_status, result.coverage,
-            result.confidence, result.priority, result.remedy, False, None
+            result.confidence, result.priority, result.remedy, False, None,
+            outcome.get('aggregation_mode'), outcome.get('unknown_reason'),
+            outcome.get('viewpoint_count'), outcome.get('valid_viewpoint_count'),
+            outcome.get('sampled_frame_count'),
         )
         with connect(self.db_path) as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO tree_processing_cache (
                     batch_sha256, pipeline_fingerprint, source_inspection_id,
                     source_tree_id, disease_name, coverage, confidence, priority,
-                    remedy, evidence_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    remedy, evidence_json, aggregation_mode, unknown_reason
+                    , viewpoint_count, valid_viewpoint_count, sampled_frame_count,
+                    world_sha256, experiment_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (batch_hash, self.pipeline_fingerprint, inspection_id, tree_id,
                  result.disease_status, result.coverage, result.confidence,
-                 result.priority, result.remedy, json.dumps(evidence, sort_keys=True)),
+                 result.priority, result.remedy, json.dumps(evidence, sort_keys=True),
+                 outcome.get('aggregation_mode'), outcome.get('unknown_reason'),
+                 outcome.get('viewpoint_count'), outcome.get('valid_viewpoint_count'),
+                 outcome.get('sampled_frame_count'), self.world_sha256,
+                 self.experiment_version),
             )
         return False
 
     def _load_observation_context(self, metadata, depth):
+        self._offline_observation_metadata = metadata
         info = metadata['camera_info']
         msg = CameraInfo()
         msg.header.frame_id = str(info.get('frame_id', 'camera_link_optical'))
@@ -438,20 +632,33 @@ class ProcessingNode(Node):
         depth_t = float(metadata['depth']['timestamp'])
         depth_stamp = rclpy.time.Time(nanoseconds=int(depth_t * 1_000_000_000)).to_msg()
         with self.state_lock:
+            self.latest_depth_frame = depth
             self.depth_buffer.clear()
             self.depth_buffer.append((depth_t, depth_stamp, depth))
 
     def _complete_tree(self, inspection_id, tree_id, disease, coverage, confidence,
-                       priority, remedy, cache_hit, cache_source):
+                       priority, remedy, cache_hit, cache_source,
+                       aggregation_mode=None, unknown_reason=None,
+                       viewpoint_count=None, valid_viewpoint_count=None,
+                       sampled_frame_count=None):
         with connect(self.db_path) as conn:
             conn.execute(
                 """UPDATE inspection_log SET status='completed', disease_name=?,
                           coverage=?, confidence=?, priority=?, remedy=?,
                           processing_error=NULL, cache_hit=?,
-                          cache_source_inspection_id=?, completed_at=CURRENT_TIMESTAMP
+                          cache_source_inspection_id=?, completed_at=CURRENT_TIMESTAMP,
+                          leaf_backend=?, checkpoint_sha256=?, pipeline_fingerprint=?,
+                          aggregation_mode=?, unknown_reason=?, viewpoint_count=?,
+                          valid_viewpoint_count=?, sampled_frame_count=?,
+                          world_sha256=?, experiment_version=?
                    WHERE inspection_id=? AND tree_id=? AND status='processing'""",
                 (disease, coverage, confidence, priority, remedy, int(cache_hit),
-                 cache_source, inspection_id, tree_id),
+                 cache_source, self.leaf_backend_spec.name,
+                 self.leaf_backend_spec.checkpoint_sha256,
+                 self.pipeline_fingerprint, aggregation_mode, unknown_reason,
+                 viewpoint_count, valid_viewpoint_count, sampled_frame_count,
+                 self.world_sha256, self.experiment_version,
+                 inspection_id, tree_id),
             )
 
     def delayed_init(self):
@@ -471,13 +678,28 @@ class ProcessingNode(Node):
             device = self._cached_device
             self.model_tree_path = self.get_parameter('model_tree_path').value
             self.model_fruit_path = self.get_parameter('model_fruit_path').value
-            self.model_leaf_path = self.get_parameter('model_leaf_path').value
             self.model_tree = YOLO(self.model_tree_path).to(device)
             self.model_fruit = YOLO(self.model_fruit_path).to(device)
-            self.model_leaf = YOLO(self.model_leaf_path).to(device)
+            leaf_backend = LeafBackendClient(
+                str(self.get_parameter('leaf_deployment_config_path').value)
+            )
+            if leaf_backend.spec != self.leaf_backend_spec:
+                raise RuntimeError(
+                    "leaf deployment configuration changed after node startup; "
+                    "restart is required"
+                )
+            self.leaf_backend = leaf_backend
+            self.leaf_backend.start()
             self.models_ready = True
-            self.get_logger().info("All models loaded successfully!")
+            self.log_diagnostic(
+                "Tree/fruit models and selected leaf backend loaded successfully: "
+                f"{self.leaf_backend.spec.name} ({self.leaf_backend.spec.framework})"
+            )
         except Exception as e:
+            if self.leaf_backend is not None:
+                self.leaf_backend.close()
+                self.leaf_backend = None
+            self.models_ready = False
             self.get_logger().error(f"Critical error: Failed to load models: {e}")
 
     def image_callback(self, msg):
@@ -560,11 +782,12 @@ class ProcessingNode(Node):
                 self.scan_disease_votes[evidence_key] = {
                     'epoch': int(self.scan_epoch),
                     'target_id': int(self.scan_target_tree_id),
-                    'counts': {}, 'conf_sum': {},
-                    'total_crops': 0, 'yolo_frames': 0,
+                    'counts': {}, 'conf_sum': {}, 'coverage_sum': {},
+                    'total_crops': 0, 'leaf_detection_frames': 0,
                     'valid_frames': 0, 'rejected_frames': 0,
                     'sum_raw_conf': 0.0, 'max_raw_conf': 0.0,
-                    'max_valid_conf': 0.0
+                    'max_valid_conf': 0.0, 'association_detections': [],
+                    'backend_detection_count': 0, 'temporal_frames': {}
                 }
 
 
@@ -677,10 +900,18 @@ class ProcessingNode(Node):
 
 
             trans = frame_context.get('odom_from_camera')
-            if trans is None:
+            if trans is None and not getattr(
+                self, '_offline_observation_metadata', None
+            ):
                 trans = self.tf_buffer.lookup_transform(
                     "odom", "camera_link_optical", stamp
                 )
+            if trans is None:
+                self.get_logger().warning(
+                    'Offline observation has no captured odom_from_camera; '
+                    'frame excluded without querying live TF'
+                )
+                return
 
         except Exception as e:
             self.get_logger().warning(f"TF lookup failed: {e}", throttle_duration_sec=2.0)
@@ -726,19 +957,24 @@ class ProcessingNode(Node):
         )
 
         tree_debug_input = os.path.join(self.debug_root, "tree_yolo_input.jpg")
-        cv2.imwrite(tree_debug_input, frame)
-        self.log_diagnostic(f"[TREE YOLO DEBUG IMAGE]\npath={tree_debug_input}\nshape={frame.shape}")
+        if self.diagnostic_artifacts_enabled:
+            self.save_diagnostic_image(tree_debug_input, frame)
+            self.log_diagnostic(
+                f"[TREE YOLO DEBUG IMAGE]\npath={tree_debug_input}\n"
+                f"shape={frame.shape}"
+            )
 
-        import hashlib
-        frame_hash_before = hashlib.sha256(frame.tobytes()).hexdigest()
-        self.log_diagnostic(
-            f"[TREE YOLO LIVE INPUT FORENSIC]\n"
-            f"frame_id={id(frame)}\n"
-            f"shape={frame.shape}\n"
-            f"dtype={frame.dtype}\n"
-            f"nbytes={frame.nbytes}\n"
-            f"sha256_before={frame_hash_before}"
-        )
+        frame_hash_before = None
+        if self.diagnostic_logging_enabled:
+            frame_hash_before = hashlib.sha256(frame.tobytes()).hexdigest()
+            self.log_diagnostic(
+                f"[TREE YOLO LIVE INPUT FORENSIC]\n"
+                f"frame_id={id(frame)}\n"
+                f"shape={frame.shape}\n"
+                f"dtype={frame.dtype}\n"
+                f"nbytes={frame.nbytes}\n"
+                f"sha256_before={frame_hash_before}"
+            )
 
         with torch.no_grad():
             NMS_IOU = 0.40
@@ -752,30 +988,31 @@ class ProcessingNode(Node):
                 imgsz=1024
             )[0]
 
-            frame_hash_after = hashlib.sha256(frame.tobytes()).hexdigest()
-            actual_raw_boxes = []
-            for raw_idx, raw_box in enumerate(res.boxes):
-                raw_conf = float(raw_box.conf[0].item())
-                raw_xyxy = (
-                    raw_box.xyxy[0].tolist()
-                    if hasattr(raw_box.xyxy[0], 'tolist')
-                    else raw_box.xyxy[0]
-                )
-                actual_raw_boxes.append({
-                    'idx': raw_idx,
-                    'conf': raw_conf,
-                    'bbox': [float(v) for v in raw_xyxy]
-                })
+            if self.diagnostic_logging_enabled:
+                frame_hash_after = hashlib.sha256(frame.tobytes()).hexdigest()
+                actual_raw_boxes = []
+                for raw_idx, raw_box in enumerate(res.boxes):
+                    raw_conf = float(raw_box.conf[0].item())
+                    raw_xyxy = (
+                        raw_box.xyxy[0].tolist()
+                        if hasattr(raw_box.xyxy[0], 'tolist')
+                        else raw_box.xyxy[0]
+                    )
+                    actual_raw_boxes.append({
+                        'idx': raw_idx,
+                        'conf': raw_conf,
+                        'bbox': [float(v) for v in raw_xyxy]
+                    })
 
-            self.log_diagnostic(
-                f"[TREE YOLO LIVE OUTPUT FORENSIC]\n"
-                f"frame_id={id(frame)}\n"
-                f"sha256_before={frame_hash_before}\n"
-                f"sha256_after={frame_hash_after}\n"
-                f"frame_unchanged={frame_hash_before == frame_hash_after}\n"
-                f"actual_res_boxes={len(actual_raw_boxes)}\n"
-                f"actual_raw_boxes={actual_raw_boxes}"
-            )
+                self.log_diagnostic(
+                    f"[TREE YOLO LIVE OUTPUT FORENSIC]\n"
+                    f"frame_id={id(frame)}\n"
+                    f"sha256_before={frame_hash_before}\n"
+                    f"sha256_after={frame_hash_after}\n"
+                    f"frame_unchanged={frame_hash_before == frame_hash_after}\n"
+                    f"actual_res_boxes={len(actual_raw_boxes)}\n"
+                    f"actual_raw_boxes={actual_raw_boxes}"
+                )
 
             for box in res.boxes:
                 conf = float(box.conf[0].item()) if hasattr(box, 'conf') else 1.0
@@ -1687,95 +1924,100 @@ class ProcessingNode(Node):
                     'target_id': live_tree_data.get('target_id'),
                     'counts': dict(live_tree_data.get('counts', {})),
                     'conf_sum': dict(live_tree_data.get('conf_sum', {})),
+                    'coverage_sum': dict(
+                        live_tree_data.get('coverage_sum', {})
+                    ),
                     'total_crops': live_tree_data.get('total_crops', 0),
-                    'yolo_frames': live_tree_data.get('yolo_frames', 0),
+                    'leaf_detection_frames': live_tree_data.get(
+                        'leaf_detection_frames', 0
+                    ),
                     'valid_frames': live_tree_data.get('valid_frames', 0),
                     'rejected_frames': live_tree_data.get('rejected_frames', 0),
                     'sum_raw_conf': live_tree_data.get('sum_raw_conf', 0.0),
                     'max_raw_conf': live_tree_data.get('max_raw_conf', 0.0),
-                    'max_valid_conf': live_tree_data.get('max_valid_conf', 0.0)
+                    'max_valid_conf': live_tree_data.get('max_valid_conf', 0.0),
+                    'association_detections': list(
+                        live_tree_data.get('association_detections', [])
+                    ),
+                    'backend_detection_count': live_tree_data.get(
+                        'backend_detection_count', 0
+                    ),
+                    'temporal_frames': dict(
+                        live_tree_data.get('temporal_frames', {})
+                    ),
                 }
 
                 tree_votes = dict(tree_data['counts'])
                 conf_sums = dict(tree_data['conf_sum'])
+                coverage_sums = dict(tree_data['coverage_sum'])
             else:
                 tree_data = None
                 tree_votes = {}
                 conf_sums = {}
+                coverage_sums = {}
 
         selected_conf = 0.0
         selected_class = "None"
-
-        if tree_data is not None:
-
-            total_valid_votes = sum(tree_votes.values())
-
-            reason = "none"
-            selected_class = "None"
-            selected_conf = 0.0
-            FINAL_MIN_AVG_CONF = 0.30
-            FINAL_MIN_FRAME_VOTES = 2
-
-            final_candidates = []
-
-            for disease, count in tree_votes.items():
-                c_sum = float(conf_sums.get(disease, 0.0))
-                avg_c = c_sum / count if count > 0 else 0.0
-
-                if (
-                    count >= FINAL_MIN_FRAME_VOTES
-                    and avg_c >= FINAL_MIN_AVG_CONF
-                ):
-                    final_candidates.append(
-                        (disease, count, c_sum, avg_c, "multi_frame_confirmation")
-                    )
-                elif count == 1 and avg_c >= 0.50:
-                    final_candidates.append(
-                        (disease, count, c_sum, avg_c, "single_strong_frame_confirmation")
-                    )
-
-            if final_candidates:
-
-
-                top_disease, top_count, top_sum, top_avg, top_reason = max(
-                    final_candidates,
-                    key=lambda item: (item[3], item[2], item[1])
-                )
-
-                d_name = top_disease
-                selected_class = top_disease
-                selected_conf = top_avg
-                reason = top_reason
-            else:
-                d_name = "Unknown"
-                selected_class = "None"
-                selected_conf = 0.0
-                reason = "insufficient_final_evidence"
-
-            log_str = (
-                f"DISEASE FINAL SELECTION:\n"
-                f"tree_id={target_matched_id}\n"
-                f"total_crops={tree_data.get('total_crops', 0)}\n"
-                f"valid_frames={tree_data.get('valid_frames', 0)}\n"
-                f"votes={conf_sums}\n"
-                f"counts={tree_votes}\n"
-                f"max_conf={tree_data.get('max_valid_conf', 0.0):.4f}\n"
-                f"selected_class={selected_class}\n"
-                f"selected_conf={selected_conf:.4f}\n"
-                f"result={d_name}\n"
-                f"reason={reason}\n"
-            )
-            self.get_logger().info(log_str)
+        selected_coverage = 0.0
+        aggregation_mode = self.primary_aggregation_mode
+        unknown_reason = None
+        roi_count = 0 if tree_data is None else int(tree_data.get('total_crops', 0))
+        backend_count = 0 if tree_data is None else int(
+            tree_data.get('backend_detection_count', 0)
+        )
+        temporal_rows = [] if tree_data is None else list(
+            tree_data.get('temporal_frames', {}).values()
+        )
+        frames = [FrameDetectionEvidence(
+            str(row['observation_id']), str(row['viewpoint_id']),
+            float(row['timestamp']), dict(row.get('class_counts', {})),
+            dict(row.get('class_confidence_sums', {})),
+        ) for row in temporal_rows]
+        aggregation = aggregate_temporal_multi_view(
+            frames, self.temporal_policy, roi_count, backend_count,
+            self.required_viewpoint_ids,
+        )
+        unknown_reason = aggregation.unknown_reason
+        selected_support = 0.0
+        if aggregation.class_name is None:
+            d_name = "Unknown"
+            reason = unknown_reason
         else:
-            reason = "missing_target_or_no_votes_data"
-            self.get_logger().info(
-                f"DISEASE FINAL SELECTION:\n"
-                f"tree_id={target_matched_id}\n"
-                f"result=Unknown\n"
-                f"reason={reason}\n"
-            )
-
-        severity = self.severity_map.get(d_name, 0.0)
+            d_name = _legacy_leaf_result_name(aggregation.class_name)
+            selected_class = d_name
+            selected_conf = aggregation.confidence
+            valid_views = [
+                view for view in aggregation.diagnostics['viewpoints'].values()
+                if view.get('valid')
+            ]
+            selected_support = sum(
+                view.get('normalized_support', {}).get(aggregation.class_name, 0.0)
+                for view in valid_views
+            ) / len(valid_views)
+            selected_coverage = selected_support * 100.0
+            reason = "temporal_multi_view_support"
+        self._last_tree_outcome = {
+            'aggregation_mode': aggregation_mode,
+            'unknown_reason': unknown_reason,
+            'viewpoint_count': aggregation.viewpoint_count,
+            'valid_viewpoint_count': aggregation.valid_viewpoint_count,
+            'sampled_frame_count': aggregation.sampled_frame_count,
+        }
+        self.get_logger().info(
+            f"DISEASE FINAL SELECTION:\n"
+            f"tree_id={target_matched_id}\n"
+            f"aggregation_mode={aggregation_mode}\n"
+            f"temporal_input_frames={len(frames)}\n"
+            f"sampled_frames={aggregation.sampled_frame_count}\n"
+            f"valid_viewpoints={aggregation.valid_viewpoint_count}/"
+            f"{aggregation.viewpoint_count}\n"
+            f"viewpoint_votes={dict(aggregation.viewpoint_votes)}\n"
+            f"selected_class={selected_class}\n"
+            f"selected_conf={selected_conf:.4f}\n"
+            f"result={d_name}\n"
+            f"unknown_reason={unknown_reason}\n"
+            f"reason={reason}"
+        )
 
         import os
         debug_dir = os.path.join(self.debug_root, "disease_reports")
@@ -1791,9 +2033,14 @@ class ProcessingNode(Node):
         if tree_data is not None:
             counts = dict(tree_data.get('counts', {}))
             conf_sums = dict(tree_data.get('conf_sum', {}))
+            coverage_sums = dict(tree_data.get('coverage_sum', {}))
+            total_coverage_evidence = sum(
+                max(0.0, float(value))
+                for value in coverage_sums.values()
+            )
 
             total_crops = tree_data.get('total_crops', 0)
-            yolo_frames = tree_data.get('yolo_frames', 0)
+            leaf_detection_frames = tree_data.get('leaf_detection_frames', 0)
             valid_frames = tree_data.get('valid_frames', 0)
             rejected_frames = tree_data.get('rejected_frames', 0)
             sum_raw_conf = tree_data.get('sum_raw_conf', 0.0)
@@ -1817,7 +2064,10 @@ class ProcessingNode(Node):
             report.append(f"Tracker distance: {min_dist:.6f}\n")
 
             report.append(f"Total crops: {total_crops}")
-            report.append(f"YOLO crops with leaf detections: {yolo_frames}")
+            report.append(
+                "Backend crops with leaf detections: "
+                f"{leaf_detection_frames}"
+            )
             report.append(f"Valid frames: {valid_frames}")
             report.append(f"Rejected frames: {rejected_frames}\n")
 
@@ -1829,20 +2079,40 @@ class ProcessingNode(Node):
             report.append(f"Total valid frame votes: {total_votes}\n")
             report.append("Disease statistics:\n")
 
-            all_diseases = ["Leaf_Blight", "Leaf_Healthy", "Leaf_Algal", "Leaf_Colletotrichum", "Leaf_Phomopsis", "Leaf_Rhizoctonia"]
+            all_diseases = [
+                _legacy_leaf_result_name(name)
+                for name in CANONICAL_CLASS_NAMES
+            ]
             for disease in all_diseases:
                 count = counts.get(disease, 0)
                 c_sum = conf_sums.get(disease, 0.0)
                 avg_conf = c_sum / count if count > 0 else 0.0
+                coverage_sum = max(
+                    0.0,
+                    float(coverage_sums.get(disease, 0.0))
+                )
+                coverage_pct = (
+                    coverage_sum / total_coverage_evidence * 100.0
+                    if total_coverage_evidence > 0.0
+                    else 0.0
+                )
                 report.append(f"{disease}")
                 report.append(f"Vote count: {count}")
                 report.append(f"Confidence sum: {c_sum:.6f}")
-                report.append(f"Average confidence: {avg_conf:.6f}\n")
+                report.append(f"Average confidence: {avg_conf:.6f}")
+                report.append(f"Detected area evidence: {coverage_sum:.6f}")
+                report.append(
+                    f"Relative class-area evidence: {coverage_pct:.6f}%\n"
+                )
 
             report.append("---")
             report.append(f"\nFINAL DISEASE: {d_name}")
             report.append(f"FINAL VOTE COUNT: {final_count}")
-            report.append(f"FINAL AVERAGE CONFIDENCE: {final_avg_conf:.6f}\n")
+            report.append(f"FINAL AVERAGE CONFIDENCE: {final_avg_conf:.6f}")
+            report.append(
+                "FINAL RELATIVE CLASS-AREA EVIDENCE: "
+                f"{selected_coverage:.6f}%\n"
+            )
             report.append("============================================================\n")
 
             report_str = "\n".join(report)
@@ -1859,6 +2129,8 @@ class ProcessingNode(Node):
                 f"Final disease: {d_name}\n"
                 f"Votes: {final_count} / {total_votes}\n"
                 f"Average confidence: {final_avg_conf:.6f}\n"
+                "Relative class-area evidence: "
+                f"{selected_coverage:.6f}%\n"
                 f"Debug file: {debug_file}"
             )
         else:
@@ -1866,26 +2138,14 @@ class ProcessingNode(Node):
 
         response.durian_type = "Musang King (D197)"
         response.disease_status = d_name
-        response.coverage = float(severity * 100.0)
+        # Compatibility field: selected class mean normalized per-view support.
+        # It is diagnostic detection support, not biological severity.
+        response.coverage = float(selected_coverage)
         response.confidence = float(selected_conf * 100.0)
 
-        remedy = "None"
-        priority = "None"
-        if d_name == "Leaf_Blight":
-            remedy = "Difenoconazole"
-            priority = "High"
-        elif d_name == "Leaf_Algal":
-            remedy = "Copper-based"
-            priority = "Medium"
-        elif d_name == "Leaf_Colletotrichum":
-            remedy = "Azoxystrobin"
-            priority = "Medium"
-        elif d_name == "Leaf_Phomopsis":
-            remedy = "Carbendazim"
-            priority = "Low"
-        elif d_name == "Leaf_Rhizoctonia":
-            remedy = "Jinggangmycin"
-            priority = "High"
+        disease_config = self.tree_config.get(d_name, {})
+        remedy = disease_config.get("remedy", "None")
+        priority = disease_config.get("priority", "None")
 
         response.remedy = remedy
         response.priority = priority
@@ -1953,7 +2213,7 @@ class ProcessingNode(Node):
         )
 
         if not is_unreliable and not projection_eligible:
-            self.get_logger().info(
+            self.log_diagnostic(
                 f"[PROJECTION DIAG] skipped: "
                 f"real_xyz=({real_x},{real_y},{real_z}) "
                 f"z_valid={real_z is not None and float(real_z) > 0.05 if real_z is not None else False} "
@@ -1987,7 +2247,7 @@ class ProcessingNode(Node):
                 cam_pt = tf2_geometry_msgs.do_transform_point(pt, trans)
 
                 if cam_pt.point.z <= 0.05:
-                    self.get_logger().info(
+                    self.log_diagnostic(
                         f"[PROJECTION DIAG] INVALID_CAMERA_Z "
                         f"cam_z={cam_pt.point.z:.6f}"
                     )
@@ -2001,7 +2261,7 @@ class ProcessingNode(Node):
                     proj_y = int(cam_pt.point.y * fy / cam_pt.point.z + cy_cam)
 
                     if not (0 <= proj_x < width and 0 <= proj_y < height):
-                        self.get_logger().info(
+                        self.log_diagnostic(
                             f"[PROJECTION DIAG] OUTSIDE_IMAGE "
                             f"cam_xyz=({cam_pt.point.x:.3f},{cam_pt.point.y:.3f},{cam_pt.point.z:.3f}) "
                             f"proj=({proj_x},{proj_y}) image={width}x{height}"
@@ -2048,14 +2308,14 @@ class ProcessingNode(Node):
                         target_w = min(width, int(target_w))
                         target_h = min(height, int(target_h))
 
-                        self.get_logger().info(
+                        self.log_diagnostic(
                             f"[ROI SAFETY] "
                             f"bbox_area_ratio={bbox_area_ratio:.4f} "
                             f"border_touch_count={border_touch_count} "
                             f"max_area_ratio={max_area_ratio:.4f} "
                             f"final_target={target_w}x{target_h}"
                         )
-                        self.get_logger().info(
+                        self.log_diagnostic(
                             f"[PROJECTION FORENSIC] "
                             f"tree_bbox=({x1},{y1},{x2},{y2}) "
                             f"tree_size={box_w}x{box_h} "
@@ -2299,7 +2559,7 @@ class ProcessingNode(Node):
         leaf_detections = 0
         leaf_conf = 0.0
 
-        if self.model_leaf:
+        if self.leaf_backend:
             crop, crop_bbox = self.make_leaf_crop(frame, (x1, y1, x2, y2), real_x, real_y, real_z, stamp)
 
             if crop is None:
@@ -2309,16 +2569,22 @@ class ProcessingNode(Node):
                 crop_bbox_str = f"{c_x1},{c_y1},{c_x2},{c_y2}"
                 crop_size_str = f"{crop.shape[1]}x{crop.shape[0]}"
 
-                import cv2
-                saved = cv2.imwrite(os.path.join(self.debug_root, f"tree_{tracking_id}_{debug_id}.jpg"), crop)
-                if not saved:
-                    self.get_logger().error("ERROR: failed to save debug ROI")
-                else:
-                    self.log_diagnostic(f"ROI SAVED:\ntracking_id={tracking_id}\ndebug_id={debug_id}\nbbox={x1},{y1},{x2},{y2}\ncrop_bbox={crop_bbox_str}\ncrop_size={crop_size_str}")
-
+                if self.diagnostic_artifacts_enabled:
+                    saved = self.save_diagnostic_image(
+                        os.path.join(
+                            self.debug_root,
+                            f"tree_{tracking_id}_{debug_id}.jpg",
+                        ),
+                        crop,
+                    )
+                    if not saved:
+                        self.get_logger().error("ERROR: failed to save debug ROI")
+                    else:
+                        self.log_diagnostic(f"ROI SAVED:\ntracking_id={tracking_id}\ndebug_id={debug_id}\nbbox={x1},{y1},{x2},{y2}\ncrop_bbox={crop_bbox_str}\ncrop_size={crop_size_str}")
                 durian_type_id = self.detect_durian_type(crop)
                 d_name, severity, reason, leaf_detections, leaf_conf = self.detect_leaf_disease(
-                    crop, tracking_id, vote_target_id, debug_id, tree_conf, frame_epoch
+                    crop, tracking_id, vote_target_id, debug_id, tree_conf,
+                    frame_epoch, crop_bbox
                 )
 
         type_info = self.tree_config.get(durian_type_id, {'name': 'Unknown'})
@@ -2384,7 +2650,7 @@ class ProcessingNode(Node):
             f"crop_size: {crop_size_str}\n\n"
             f"FRUIT YOLO:\n"
             f"result: {durian_type_id}\n\n"
-            f"LEAF YOLO:\n"
+            f"LEAF BACKEND:\n"
             f"detections: {leaf_detections}\n\n"
             f"LEAF RESULT:\n"
             f"class: {d_name}\n"
@@ -2394,7 +2660,7 @@ class ProcessingNode(Node):
         )
 
     def calibrate_colors(self):
-        self.get_logger().info("Using Pure YOLO for disease detection in all environments.")
+        """Retain legacy colour-calibration hook without claiming a backend."""
 
     def apply_hsv_clahe(self, img, sat_factor, use_clahe):
         import cv2
@@ -2484,29 +2750,67 @@ class ProcessingNode(Node):
                 'target_id': int(target_id),
                 'counts': {},
                 'conf_sum': {},
+                'coverage_sum': {},
                 'total_crops': 0,
-                'yolo_frames': 0,
+                'leaf_detection_frames': 0,
                 'valid_frames': 0,
                 'rejected_frames': 0,
                 'sum_raw_conf': 0.0,
                 'max_raw_conf': 0.0,
-                'max_valid_conf': 0.0
+                'max_valid_conf': 0.0,
+                'association_detections': [],
+                'backend_detection_count': 0,
+                'temporal_frames': {}
             }
             self.scan_disease_votes[key] = evidence
 
         return evidence
 
-    def detect_leaf_disease(self, crop, tracking_id, vote_target_id, debug_id, tree_conf, frame_epoch=None):
+    def _tree_frame_detection(self, box, crop_bbox):
+        """Project one crop-local leaf bbox into a tree-centred map-aligned frame."""
+        metadata = getattr(self, '_offline_observation_metadata', None)
+        depth = getattr(self, 'latest_depth_frame', None)
+        if not metadata or depth is None or not crop_bbox:
+            return None
+        transforms = metadata.get('transforms', {})
+        odom_from_camera = transforms.get('odom_from_camera')
+        odom_from_map = transforms.get('odom_from_map')
+        if not odom_from_camera or not odom_from_map:
+            return None
+        offset_x, offset_y = float(crop_bbox[0]), float(crop_bbox[1])
+        local = box['bbox']
+        full_bbox = (
+            float(local[0]) + offset_x, float(local[1]) + offset_y,
+            float(local[2]) + offset_x, float(local[3]) + offset_y,
+        )
+        depth_m = robust_center_depth(
+            depth, full_bbox, self.association_policy,
+            float(self.get_parameter('depth_min_meters').value),
+            float(self.get_parameter('depth_max_meters').value),
+        )
+        if depth_m is None:
+            return None
+        center_u = (full_bbox[0] + full_bbox[2]) / 2.0
+        center_v = (full_bbox[1] + full_bbox[3]) / 2.0
+        camera_point = project_pixel(
+            center_u, center_v, depth_m, metadata['camera_info']['k']
+        )
+        odom_leaf = transform_point(camera_point, odom_from_camera)
+        target = metadata['target_map']
+        odom_tree = transform_point(
+            (float(target['x']), float(target['y']), float(target.get('z', 0.0))),
+            odom_from_map,
+        )
+        return tuple(leaf - tree for leaf, tree in zip(odom_leaf, odom_tree))
+
+    def detect_leaf_disease(self, crop, tracking_id, vote_target_id, debug_id,
+                            tree_conf, frame_epoch=None, crop_bbox=None):
         d_name = "Unknown"
         severity = 0.0
         reason = "NO_LEAF_DETECTION"
         frame_votes = {}
 
-        MIN_LEAF_CONF = 0.01
-
-        LEAF_EVIDENCE_CONF = 0.20
-
-        NMS_IOU = 0.40
+        LEAF_EVIDENCE_CONF = self.leaf_backend.threshold
 
         leaf_detections = 0
         leaf_conf = 0.0
@@ -2535,7 +2839,7 @@ class ProcessingNode(Node):
 
             evidence['total_crops'] += 1
 
-        if crop.size > 0 and self.model_leaf:
+        if crop.size > 0 and self.leaf_backend:
 
 
             if not hasattr(self, 'leaf_diag_stats'):
@@ -2543,7 +2847,7 @@ class ProcessingNode(Node):
             if matched_id not in self.leaf_diag_stats:
                 self.leaf_diag_stats[matched_id] = {
                     'total_candidates': 0, 'geometry_accepted': 0, 'geometry_rejected': 0,
-                    'yolo_evaluated': 0, 'no_detection': 0, 'raw_low_conf': 0,
+                    'backend_evaluated': 0, 'no_detection': 0, 'raw_low_conf': 0,
                     'geometry_rejected_roi': 0, 'success': 0, 'mixed': 0,
                     'confs': [], 'widths': [], 'heights': [],
                     'reason_BORDER_TOUCH': 0, 'reason_AREA_RATIO': 0,
@@ -2567,7 +2871,7 @@ class ProcessingNode(Node):
             all_raw_boxes = []
             tile_id = 0
 
-            raw_yolo_count = 0
+            raw_leaf_count = 0
             reject_border = 0
             reject_area = 0
             reject_size = 0
@@ -2588,79 +2892,17 @@ class ProcessingNode(Node):
                     tile_crop = crop
 
                     if tile_crop.size > 0:
-                        self.leaf_diag_stats[matched_id]['yolo_evaluated'] += 1
+                        self.leaf_diag_stats[matched_id]['backend_evaluated'] += 1
 
-                        leaf_inference_scales = self.get_parameter(
-                            'leaf_inference_scales'
-                        ).value
-
-
-                        try:
-                            leaf_inference_scales = [
-                                int(v) for v in leaf_inference_scales
-                                if int(v) > 0
-                            ]
-                        except Exception:
-                            leaf_inference_scales = []
-
-
-                        leaf_inference_scales = list(dict.fromkeys(
-                            leaf_inference_scales
-                        ))
-
-                        leaf_scale_results = []
-
-                        if not leaf_inference_scales:
-                            self.log_diagnostic(
-                                "[LEAF MULTISCALE] "
-                                "no configured inference scales; "
-                                "leaf inference skipped"
-                            )
-                        else:
-                            for leaf_imgsz in leaf_inference_scales:
-                                res_try = self.model_leaf(
-                                    tile_crop,
-                                    verbose=False,
-                                    conf=MIN_LEAF_CONF,
-                                    imgsz=leaf_imgsz
-                                )[0]
-
-                                raw_count_try = len(res_try.boxes)
-                                leaf_scale_results.append(
-                                    (leaf_imgsz, res_try)
-                                )
-
-                                self.log_diagnostic(
-                                    f"[LEAF MULTISCALE] "
-                                    f"scale={leaf_imgsz} "
-                                    f"raw_boxes={raw_count_try}"
-                                )
-
-                        leaf_detection_records = []
-                        total_multiscale_raw = 0
-
-                        for _scale, _result in leaf_scale_results:
-                            for _box in _result.boxes:
-                                leaf_detection_records.append(
-                                    (_scale, _result, _box)
-                                )
-                                total_multiscale_raw += 1
-
-                        if leaf_scale_results:
-
-
-                            selected_leaf_scale = leaf_scale_results[-1][0]
-                            res_v26 = leaf_scale_results[-1][1]
-
-                            self.log_diagnostic(
-                                f"[LEAF MULTISCALE RESULT] "
-                                f"mode=MERGED "
-                                f"scales={[x[0] for x in leaf_scale_results]} "
-                                f"total_raw_boxes={total_multiscale_raw}"
-                            )
-                        else:
-                            res_v26 = None
-                            selected_leaf_scale = None
+                        leaf_detection_records = self.leaf_backend.infer(tile_crop)
+                        selected_leaf_scale = self.leaf_backend.spec.native_resolution
+                        self.log_diagnostic(
+                            f"[LEAF BACKEND RESULT] "
+                            f"backend={self.leaf_backend.spec.name} "
+                            f"framework={self.leaf_backend.spec.framework} "
+                            f"inference_size={selected_leaf_scale} "
+                            f"raw_boxes={len(leaf_detection_records)}"
+                        )
 
                         roi_diag = {
                             'raw_box_count': 0, 'raw_boxes_conf_ge_0_20': 0, 'raw_boxes_conf_lt_0_20': 0,
@@ -2672,28 +2914,28 @@ class ProcessingNode(Node):
                         tile_id = 0
                         x1, y1 = 0, 0
 
-                        for leaf_imgsz, leaf_result, box in leaf_detection_records:
-                            raw_yolo_count += 1
-                            cand_idx = raw_yolo_count - 1
+                        for box in leaf_detection_records:
+                            raw_leaf_count += 1
+                            cand_idx = raw_leaf_count - 1
                             roi_diag['raw_box_count'] += 1
 
-                            conf = float(box.conf[0].item())
-                            cls_idx = int(box.cls[0].item())
-                            raw_name = leaf_result.names[cls_idx]
+                            conf = float(box.confidence)
+                            cls_idx = int(box.class_id)
+                            raw_name = box.class_name
 
                             self.leaf_diag_stats[matched_id]['confs'].append(conf)
-                            if conf >= 0.20:
+                            if conf >= LEAF_EVIDENCE_CONF:
                                 roi_diag['raw_boxes_conf_ge_0_20'] += 1
                             else:
                                 roi_diag['raw_boxes_conf_lt_0_20'] += 1
 
 
-                            px1, py1, px2, py2 = box.xyxy[0].tolist()
+                            px1, py1, px2, py2 = box.x1, box.y1, box.x2, box.y2
 
                             self.log_diagnostic(
-                                f"[LEAF YOLO RAW XYXY]\n"
+                                f"[LEAF BACKEND RAW XYXY]\n"
                                 f"roi=FULL\n"
-                                f"imgsz={leaf_imgsz}\n"
+                                f"imgsz={box.inference_size}\n"
                                 f"px1={px1:.2f}\n"
                                 f"py1={py1:.2f}\n"
                                 f"px2={px2:.2f}\n"
@@ -2715,9 +2957,9 @@ class ProcessingNode(Node):
                             local_area = local_w * local_h
 
 
-                            if conf >= 0.20 and cand_idx < 3:
+                            if conf >= LEAF_EVIDENCE_CONF and cand_idx < 3:
                                 roi_debug_path = os.path.join(prod_debug_dir, f"tree{matched_id}_full_{raw_name}_{conf:.2f}.png")
-                                cv2.imwrite(roi_debug_path, tile_crop)
+                                self.save_diagnostic_image(roi_debug_path, tile_crop)
 
                             touch_left_crop = bx1 < 5
                             touch_right_crop = bx2 > width - 5
@@ -2790,34 +3032,7 @@ class ProcessingNode(Node):
 
                             accepted_geometry += 1
                             roi_diag['geometry_pass_count'] += 1
-                            norm_name = raw_name.lower().replace(" ", "_")
-                            d_class = "Unknown"
-                            if "algal" in norm_name or "algae" in norm_name:
-                                d_class = "Leaf_Algal"
-                            elif "spot" in norm_name:
-                                d_class = "Leaf_Spot"
-                            elif "blight" in norm_name:
-                                d_class = "Leaf_Blight"
-                            elif "healthy" in norm_name:
-                                d_class = "Leaf_Healthy"
-                            elif "colletotrichum" in norm_name:
-                                d_class = "Leaf_Colletotrichum"
-                            elif "phomopsis" in norm_name:
-                                d_class = "Leaf_Phomopsis"
-                            elif "rhizoctonia" in norm_name:
-                                d_class = "Leaf_Rhizoctonia"
-
-                            if d_class == "Unknown":
-                                if "healthy" in norm_name: d_class = "Leaf_Healthy"
-                            if "colletotrichum" in norm_name: d_class = "Leaf_Colletotrichum"
-                            elif "phomopsis" in norm_name: d_class = "Leaf_Phomopsis"
-                            elif "rhizoctonia" in norm_name: d_class = "Leaf_Rhizoctonia"
-                            elif d_class == "Unknown":
-
-                                for k in self.tree_config.keys():
-                                    if k.lower() == norm_name:
-                                        d_class = k
-                                        break
+                            d_class = _legacy_leaf_result_name(raw_name)
 
                             all_raw_boxes.append({
                                 'tile_id': tile_id,
@@ -2830,51 +3045,54 @@ class ProcessingNode(Node):
                                 'local_bbox': [px1, py1, px2, py2]
                             })
 
-                            self.log_diagnostic(f"LEAF YOLO ACCEPTED: roi=FULL cand={cand_idx} class={cls_idx} norm_class={d_class} conf={conf:.4f}")
+                            self.log_diagnostic(f"LEAF BACKEND ACCEPTED: roi=FULL cand={cand_idx} class={cls_idx} norm_class={d_class} conf={conf:.4f}")
 
 
                     diag_base = "/tmp/durian_roi_diagnostic"
                     if roi_diag['raw_box_count'] == 0:
                         self.leaf_diag_stats[matched_id]['no_detection'] += 1
-                        cv2.imwrite(os.path.join(diag_base, f"no_detection/tree{matched_id}_full.png"), tile_crop)
+                        self.save_diagnostic_image(os.path.join(diag_base, f"no_detection/tree{matched_id}_full.png"), tile_crop)
                     elif roi_diag['raw_boxes_conf_ge_0_20'] == 0:
                         self.leaf_diag_stats[matched_id]['raw_low_conf'] += 1
-                        cv2.imwrite(os.path.join(diag_base, f"low_conf/tree{matched_id}_full.png"), tile_crop)
+                        self.save_diagnostic_image(os.path.join(diag_base, f"low_conf/tree{matched_id}_full.png"), tile_crop)
                     elif roi_diag['geometry_pass_count'] == 0:
                         self.leaf_diag_stats[matched_id]['geometry_rejected_roi'] += 1
-                        cv2.imwrite(os.path.join(diag_base, f"geometry_rejected/tree{matched_id}_full.png"), tile_crop)
+                        self.save_diagnostic_image(os.path.join(diag_base, f"geometry_rejected/tree{matched_id}_full.png"), tile_crop)
                     elif roi_diag['geometry_pass_count'] > 0:
                         roi_passed_boxes = [b for b in all_raw_boxes if b['tile_id'] == tile_id]
-                        if any(b['conf'] >= 0.20 for b in roi_passed_boxes):
+                        if any(
+                            b['conf'] >= LEAF_EVIDENCE_CONF
+                            for b in roi_passed_boxes
+                        ):
                             self.leaf_diag_stats[matched_id]['success'] += 1
-                            cv2.imwrite(os.path.join(diag_base, f"success/tree{matched_id}_full.png"), tile_crop)
+                            self.save_diagnostic_image(os.path.join(diag_base, f"success/tree{matched_id}_full.png"), tile_crop)
                         else:
                             self.leaf_diag_stats[matched_id]['mixed'] += 1
-                            cv2.imwrite(os.path.join(diag_base, f"mixed/tree{matched_id}_full.png"), tile_crop)
+                            self.save_diagnostic_image(os.path.join(diag_base, f"mixed/tree{matched_id}_full.png"), tile_crop)
                     else:
                         self.leaf_diag_stats[matched_id]['mixed'] += 1
-                        cv2.imwrite(os.path.join(diag_base, f"mixed/tree{matched_id}_full.png"), tile_crop)
+                        self.save_diagnostic_image(os.path.join(diag_base, f"mixed/tree{matched_id}_full.png"), tile_crop)
 
 
             diag_stats = self.leaf_diag_stats[matched_id]
-            diag_stats['total_candidates'] += raw_yolo_count
+            diag_stats['total_candidates'] += raw_leaf_count
             diag_stats['geometry_accepted'] += accepted_geometry
             diag_stats['geometry_rejected'] += (
-                raw_yolo_count - accepted_geometry
+                raw_leaf_count - accepted_geometry
             )
 
             self.log_diagnostic(
                 f"[LEAF GEOMETRY SUMMARY]\n"
-                f"raw_yolo={raw_yolo_count}\n"
+                f"raw_backend={raw_leaf_count}\n"
                 f"geometry_accepted={accepted_geometry}\n"
-                f"geometry_rejected={raw_yolo_count - accepted_geometry}"
+                f"geometry_rejected={raw_leaf_count - accepted_geometry}"
             )
 
 
 
 
 
-            raw_yolo_detections = raw_yolo_count
+            raw_leaf_detections = raw_leaf_count
             geometry_valid_detections = len(all_raw_boxes)
 
 
@@ -2882,30 +3100,18 @@ class ProcessingNode(Node):
 
 
             raw_conf_candidates = [
-                float(box.conf[0].item())
-                for _, _, box in leaf_detection_records
+                float(box.confidence) for box in leaf_detection_records
             ]
-
-            if raw_conf_candidates:
-                max_raw_conf = max(raw_conf_candidates)
-
-
-
-                LEAF_EVIDENCE_CONF = max(
-                    0.05,
-                    min(0.20, max_raw_conf * 0.60)
-                )
-            else:
-                LEAF_EVIDENCE_CONF = 0.20
+            max_raw_conf = max(raw_conf_candidates) if raw_conf_candidates else 0.0
 
             self.log_diagnostic(
-                f"[DYNAMIC LEAF EVIDENCE THRESHOLD] "
+                f"[CONFIGURED LEAF EVIDENCE THRESHOLD] "
                 f"threshold={LEAF_EVIDENCE_CONF:.4f} "
                 f"max_raw_conf={max_raw_conf:.4f}"
                 if raw_conf_candidates
                 else
-                "[DYNAMIC LEAF EVIDENCE THRESHOLD] "
-                "threshold=0.2000 max_raw_conf=0.0000"
+                "[CONFIGURED LEAF EVIDENCE THRESHOLD] "
+                f"threshold={LEAF_EVIDENCE_CONF:.4f} max_raw_conf=0.0000"
             )
 
             confidence_valid_detections = [
@@ -2919,8 +3125,7 @@ class ProcessingNode(Node):
 
 
             raw_conf_values = [
-                float(box.conf[0].item())
-                for _, _, box in leaf_detection_records
+                float(box.confidence) for box in leaf_detection_records
             ]
 
             valid_conf_values = [
@@ -2936,6 +3141,8 @@ class ProcessingNode(Node):
                 )
                 if scan_stats is None:
                     return "Unknown", 0.0, "SCAN_EVIDENCE_EXPIRED", 0, 0.0
+
+                scan_stats['backend_detection_count'] += raw_leaf_detections
 
                 if raw_conf_values:
                     scan_stats['sum_raw_conf'] += sum(raw_conf_values)
@@ -3017,12 +3224,37 @@ class ProcessingNode(Node):
 
             nms_boxes = associate_leaf_instances(confidence_valid_detections)
 
+            metadata = getattr(self, '_offline_observation_metadata', {}) or {}
+            observation_id = str(metadata.get('observation_id', f'live_{debug_id}'))
+            viewpoint_id = str(metadata.get('viewpoint_id') or 'legacy_view')
+            associated_rows = []
+            for retained_box in nms_boxes:
+                tree_xyz = self._tree_frame_detection(retained_box, crop_bbox)
+                if tree_xyz is None:
+                    continue
+                associated_rows.append({
+                    'observation_id': observation_id,
+                    'viewpoint_id': viewpoint_id,
+                    'class_id': int(retained_box['cls_idx']),
+                    'confidence': float(retained_box['conf']),
+                    'tree_xyz': list(tree_xyz),
+                })
+            if associated_rows:
+                with self.state_lock:
+                    association_evidence = self._get_scan_evidence(
+                        frame_epoch, matched_id, create=False
+                    )
+                    if association_evidence is not None:
+                        association_evidence['association_detections'].extend(
+                            associated_rows
+                        )
+
             duplicates_removed = len(confidence_valid_detections) - len(nms_boxes)
             final_detections = len(nms_boxes)
 
-            self.get_logger().info(
+            self.log_diagnostic(
                 f"LEAF FILTER:\n"
-                f"raw_yolo_detections={raw_yolo_detections}\n"
+                f"raw_backend_detections={raw_leaf_detections}\n"
                 f"geometry_valid_detections={geometry_valid_detections}\n"
                 f"below_confidence={below_confidence}\n"
                 f"confidence_valid_detections={len(confidence_valid_detections)}\n"
@@ -3033,30 +3265,16 @@ class ProcessingNode(Node):
             import cv2
             debug_crop = crop.copy()
 
-            has_yolo_boxes = raw_yolo_detections > 0
+            has_leaf_boxes = raw_leaf_detections > 0
             has_valid = len(nms_boxes) > 0
 
             frame_votes = {}
             roi_accum = {}
+            crop_area = float(max(1, width * height))
             for box in nms_boxes:
                 conf = box['conf']
                 raw_name = box['class_name']
-                norm_name = str(raw_name).strip().lower().replace(" ", "_")
-
-                if "blight" in norm_name:
-                    cls_name = "Leaf_Blight"
-                elif "algal" in norm_name or "algae" in norm_name:
-                    cls_name = "Leaf_Algal"
-                elif "colletotrichum" in norm_name or "anthracnose" in norm_name:
-                    cls_name = "Leaf_Colletotrichum"
-                elif "phomopsis" in norm_name:
-                    cls_name = "Leaf_Phomopsis"
-                elif "rhizoctonia" in norm_name:
-                    cls_name = "Leaf_Rhizoctonia"
-                elif "healthy" in norm_name:
-                    cls_name = "Leaf_Healthy"
-                else:
-                    cls_name = raw_name
+                cls_name = box['norm_class']
 
 
                 if conf > frame_votes.get(cls_name, 0.0):
@@ -3064,18 +3282,50 @@ class ProcessingNode(Node):
 
 
                 if cls_name not in roi_accum:
-                    roi_accum[cls_name] = {'count': 0, 'conf_sum': 0.0}
+                    roi_accum[cls_name] = {
+                        'count': 0,
+                        'conf_sum': 0.0,
+                        'area_ratio_sum': 0.0
+                    }
                 roi_accum[cls_name]['count'] += 1
                 roi_accum[cls_name]['conf_sum'] += conf
 
                 gx1, gy1, gx2, gy2 = map(int, box['bbox'])
+                box_area = float(
+                    max(0, gx2 - gx1) * max(0, gy2 - gy1)
+                )
+                roi_accum[cls_name]['area_ratio_sum'] += (
+                    box_area / crop_area
+                )
                 cv2.rectangle(debug_crop, (gx1, gy1), (gx2, gy2), (0, 255, 0), 2)
                 cv2.putText(debug_crop, f"{cls_name} {conf:.2f}", (gx1, max(10, gy1 - 5)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            cv2.imwrite(os.path.join(self.debug_root, f"leaf_{matched_id}_{debug_id}.jpg"), debug_crop)
+            self.save_diagnostic_image(
+                os.path.join(self.debug_root, f"leaf_{matched_id}_{debug_id}.jpg"),
+                debug_crop,
+            )
 
             vote_target_id = matched_id
+            metadata = getattr(self, '_offline_observation_metadata', {}) or {}
+            observation_id = str(metadata.get('observation_id', f'live_{debug_id}'))
+            viewpoint_id = str(metadata.get('viewpoint_id') or 'legacy_view')
+            rgb_metadata = metadata.get('rgb', {})
+            timestamp = float(rgb_metadata.get('timestamp', time.time()))
+            temporal_counts = {
+                box['class_name']: sum(
+                    1 for candidate in nms_boxes
+                    if candidate['class_name'] == box['class_name']
+                )
+                for box in nms_boxes
+            }
+            temporal_confidence_sums = {
+                class_name: sum(
+                    float(candidate['conf']) for candidate in nms_boxes
+                    if candidate['class_name'] == class_name
+                )
+                for class_name in temporal_counts
+            }
 
             with self.state_lock:
                 evidence = self._get_scan_evidence(
@@ -3087,22 +3337,36 @@ class ProcessingNode(Node):
                 if evidence is None:
                     return "Unknown", 0.0, "SCAN_EVIDENCE_EXPIRED", 0, 0.0
 
-                if has_yolo_boxes:
-                    evidence['yolo_frames'] += 1
+                evidence['temporal_frames'][observation_id] = {
+                    'observation_id': observation_id,
+                    'viewpoint_id': viewpoint_id,
+                    'timestamp': timestamp,
+                    'class_counts': temporal_counts,
+                    'class_confidence_sums': temporal_confidence_sums,
+                }
+
+                if has_leaf_boxes:
+                    evidence['leaf_detection_frames'] += 1
 
                 if has_valid:
                     evidence['valid_frames'] += 1
-                elif has_yolo_boxes:
+                elif has_leaf_boxes:
                     evidence['rejected_frames'] += 1
 
                 if has_valid:
-                    for d_class, frame_conf in frame_votes.items():
+                    evidence.setdefault('coverage_sum', {})
+                    for d_class, frame_data in roi_accum.items():
+                        frame_conf = frame_votes[d_class]
                         evidence['counts'][d_class] = (
                             evidence['counts'].get(d_class, 0) + 1
                         )
                         evidence['conf_sum'][d_class] = (
                             evidence['conf_sum'].get(d_class, 0.0)
                             + float(frame_conf)
+                        )
+                        evidence['coverage_sum'][d_class] = (
+                            evidence['coverage_sum'].get(d_class, 0.0)
+                            + float(frame_data['area_ratio_sum'])
                         )
 
             leaf_detections = len(nms_boxes)
@@ -3111,7 +3375,7 @@ class ProcessingNode(Node):
                 d_name = "Unknown"
                 reason = (
                     "NO_LEAF_DETECTION"
-                    if raw_yolo_detections == 0
+                    if raw_leaf_detections == 0
                     else "NO_VALID_LEAF_EVIDENCE"
                 )
                 leaf_conf = 0.0
@@ -3125,7 +3389,9 @@ class ProcessingNode(Node):
 
 
                 evidence_str = ", ".join(
-                    [f"{k}: count={v['count']} sum={v['conf_sum']:.4f}"
+                    [f"{k}: count={v['count']} "
+                     f"sum={v['conf_sum']:.4f} "
+                     f"area_ratio={v['area_ratio_sum']:.6f}"
                      for k, v in roi_accum.items()]
                 )
 
@@ -3145,6 +3411,9 @@ class ProcessingNode(Node):
                     snapshot_conf_sums = dict(
                         evidence_snapshot.get('conf_sum', {})
                     )
+                    snapshot_coverage_sums = dict(
+                        evidence_snapshot.get('coverage_sum', {})
+                    )
 
                 self.log_diagnostic(
                     f"[FRAME EVIDENCE RETAINED]\n"
@@ -3152,12 +3421,24 @@ class ProcessingNode(Node):
                     f"epoch={int(frame_epoch)}\n"
                     f"retained_classes={evidence_str}\n"
                     f"scan_counts={snapshot_counts}\n"
-                    f"scan_conf_sums={snapshot_conf_sums}"
+                    f"scan_conf_sums={snapshot_conf_sums}\n"
+                    f"scan_coverage_sums={snapshot_coverage_sums}"
                 )
 
-
-
-                top_d = max(frame_votes.items(), key=lambda item: item[1])[0]
+                top_d = min(
+                    roi_accum,
+                    key=lambda disease: (
+                        -roi_accum[disease]['count'],
+                        -roi_accum[disease]['conf_sum']
+                        / roi_accum[disease]['count'],
+                        canonical_class_id(
+                            next(
+                                box['class_name'] for box in nms_boxes
+                                if box['norm_class'] == disease
+                            )
+                        ),
+                    ),
+                )
                 vote_weight = frame_votes[top_d]
 
                 if "Healthy" in top_d:
@@ -3173,14 +3454,18 @@ class ProcessingNode(Node):
                     f"[FRAME PRIMARY RESULT]\n"
                     f"tree_id={matched_id}\n"
                     f"primary_class={d_name}\n"
-                    f"primary_conf={leaf_conf:.4f}"
+                    f"primary_conf={leaf_conf:.4f}\n"
+                    f"detection_count={roi_accum[top_d]['count']}\n"
+                    f"mean_confidence="
+                    f"{roi_accum[top_d]['conf_sum'] / roi_accum[top_d]['count']:.6f}\n"
+                    f"diagnostic_area_ratio={roi_accum[top_d]['area_ratio_sum']:.6f}"
                 )
 
         self.log_diagnostic(
             f"[LEAF RESULT]\n"
             f"result={d_name}\n"
             f"reason={reason}\n"
-            f"raw_yolo_detections={raw_yolo_detections}\n"
+            f"raw_backend_detections={raw_leaf_detections}\n"
             f"geometry_valid_detections={geometry_valid_detections}\n"
             f"final_nms_detections={len(nms_boxes)}"
         )
@@ -3191,7 +3476,7 @@ class ProcessingNode(Node):
             f"tree_yolo_conf={tree_conf:.4f}\n"
             f"tree_tracking_status={'EXISTING' if matched_id in self.tree_tracker else 'NEW'}\n"
             f"roi={'VALID' if crop is not None and crop.size > 0 else 'INVALID'}\n"
-            f"leaf_raw={raw_yolo_detections}\n"
+            f"leaf_raw={raw_leaf_detections}\n"
             f"leaf_geometry_valid={geometry_valid_detections}\n"
             f"leaf_valid={len(nms_boxes)}\n"
             f"disease={d_name}\n"
@@ -3206,14 +3491,15 @@ class ProcessingNode(Node):
             stats['valid_confidence_count'] = len(confidence_valid_detections)
             stats['nms_count'] = len(nms_boxes)
 
-            y_eval = stats['yolo_evaluated']
-            if y_eval > 0:
-                yolo_success_rate = stats['success'] / y_eval
-                yolo_nodet_rate = stats['no_detection'] / y_eval
-                yolo_lowconf_rate = stats['raw_low_conf'] / y_eval
-                geom_reject_rate = stats['geometry_rejected_roi'] / y_eval
+            backend_eval = stats['backend_evaluated']
+            if backend_eval > 0:
+                backend_success_rate = stats['success'] / backend_eval
+                backend_nodet_rate = stats['no_detection'] / backend_eval
+                backend_lowconf_rate = stats['raw_low_conf'] / backend_eval
+                geom_reject_rate = stats['geometry_rejected_roi'] / backend_eval
             else:
-                yolo_success_rate = yolo_nodet_rate = yolo_lowconf_rate = geom_reject_rate = 0.0
+                backend_success_rate = backend_nodet_rate = 0.0
+                backend_lowconf_rate = geom_reject_rate = 0.0
 
             w_min = min(stats['widths']) if stats['widths'] else 0
             w_max = max(stats['widths']) if stats['widths'] else 0
@@ -3231,7 +3517,7 @@ class ProcessingNode(Node):
 
             c_mean = sum(stats['confs'])/len(stats['confs']) if stats['confs'] else 0
 
-            self.get_logger().info(f"""
+            self.log_diagnostic(f"""
                 ===== LEAF ROOT CAUSE DIAGNOSTIC =====
 
                 Tree ID: {matched_id}
@@ -3241,16 +3527,17 @@ class ProcessingNode(Node):
                 geometry accepted: {stats['geometry_accepted']}
                 geometry rejected: {stats['geometry_rejected']}
 
-                YOLO:
-                evaluated: {y_eval}
-                detections >= 0.20: {stats['success'] + stats['geometry_rejected_roi'] + stats['mixed']}
-                detections < 0.20: {stats['raw_low_conf']}
+                Leaf backend:
+                name: {self.leaf_backend.spec.name}
+                evaluated: {backend_eval}
+                detections >= configured threshold: {stats['success'] + stats['geometry_rejected_roi'] + stats['mixed']}
+                detections < configured threshold: {stats['raw_low_conf']}
                 no detection: {stats['no_detection']}
 
-                YOLO Rates:
-                success rate: {yolo_success_rate:.4f}
-                no-detection rate: {yolo_nodet_rate:.4f}
-                raw-low-conf rate: {yolo_lowconf_rate:.4f}
+                Backend Rates:
+                success rate: {backend_success_rate:.4f}
+                no-detection rate: {backend_nodet_rate:.4f}
+                raw-low-conf rate: {backend_lowconf_rate:.4f}
                 geometry-reject rate: {geom_reject_rate:.4f}
 
                 Confidence:
@@ -3298,7 +3585,9 @@ class ProcessingNode(Node):
                 'counts': dict(evidence.get('counts', {})),
                 'conf_sum': dict(evidence.get('conf_sum', {})),
                 'total_crops': int(evidence.get('total_crops', 0)),
-                'yolo_frames': int(evidence.get('yolo_frames', 0)),
+                'leaf_detection_frames': int(
+                    evidence.get('leaf_detection_frames', 0)
+                ),
                 'valid_frames': int(evidence.get('valid_frames', 0)),
                 'rejected_frames': int(evidence.get('rejected_frames', 0)),
                 'sum_raw_conf': float(evidence.get('sum_raw_conf', 0.0)),
@@ -3349,6 +3638,12 @@ class ProcessingNode(Node):
         marker.color.r, marker.color.g, marker.color.b = 1.0, 1.0, 1.0
         return marker
 
+    def destroy_node(self):
+        if self.leaf_backend is not None:
+            self.leaf_backend.close()
+            self.leaf_backend = None
+        return super().destroy_node()
+
 def main(args=None):
     rclpy.init(args=args)
     node = ProcessingNode()
@@ -3356,9 +3651,10 @@ def main(args=None):
     executor.add_node(node)
     try:
         executor.spin()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        executor.shutdown(timeout_sec=2.0)
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

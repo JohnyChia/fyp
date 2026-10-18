@@ -1,0 +1,93 @@
+{
+  "schema_version": "durian.run04_v42.production_promotion_receipt.v1",
+  "status": "PASS",
+  "decision": "RUN04_V42_IS_ACTIVE_PRODUCTION_MODEL",
+  "active_backend": "fyp_run04_v42",
+  "active_configuration": {
+    "path": "/home/johny/durian_ws/src/durian_inspection_pkg/config/leaf_detector_deployment.yaml",
+    "sha256": "f2d159baeaa135c536b552e2919106fafd455f4f91ee7807ce21d4c27dd9e9c4",
+    "approved_preflight_sha256": "80368b54f0c713e5dd55848e551cc12ce1f1e40e7a2715e882ff4e991f8bc5ed",
+    "finalization_difference": "Only the Run04 manifest path was changed from the preflight-only manifest to the final production release manifest after all approved tests passed."
+  },
+  "model": {
+    "run_id": "Run04",
+    "architecture": "YOLO26n-P2",
+    "training_condition": "V4.2 corrected Hybrid",
+    "checkpoint_path": "/home/johny/durian_training/models_8run/model4_yolo26n_p2_hybrid/best.pt",
+    "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+    "threshold": 0.45,
+    "device_policy": "cuda_required",
+    "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+    "resize_policy": "framework_native_rect_original_pixel_inverse_map",
+    "adapter_version": "frozen-common-evaluator-v1"
+  },
+  "release_manifest": {
+    "path": "/home/johny/durian_ws/experiment/final_cross_domain_study/fyp_training_and_real_gt_handoff/post_training_evidence/v42_corrected_comparison_20261018/run04_production_promotion_20261018/RUN04_V42_PRODUCTION_RELEASE_MANIFEST.json",
+    "sha256": "f862721dce84db68668bdc49dc46b57130019144421b93c971ff896e3721ae5a"
+  },
+  "gates": {
+    "checkpoint_identity": "PASS",
+    "approved_config_identity": "PASS",
+    "class_mapping": "PASS",
+    "preprocessing": "PASS",
+    "threshold": "PASS",
+    "cuda_backend_inference": "PASS",
+    "gpu_latency_memory": "PASS",
+    "non_finite_output": "PASS",
+    "coordinate_validity": "PASS",
+    "ros2_configuration_regression": "PASS_61_OF_61",
+    "database_binding": "PASS",
+    "log_receipt_binding": "PASS",
+    "run01_rollback_snapshot": "PASS_8_OF_8",
+    "run01_rollback_load": "PASS_2_CUDA_INFERENCES",
+    "run04_restored_after_rollback": "PASS",
+    "sealed_test_boundary": "PASS"
+  },
+  "gpu": {
+    "device": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+    "sample_count": 48,
+    "p90_latency_ms": 48.6293,
+    "peak_vram_allocated_mb": 85.73681640625,
+    "peak_vram_reserved_mb": 104.0,
+    "non_finite_output_count": 0,
+    "coordinate_violation_count": 0
+  },
+  "rollback": {
+    "status": "PASS_VERIFIED_AND_PRESERVED",
+    "run01_checkpoint_sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+    "run01_configuration_sha256": "28f157300d187ad63e57a1658fca3cfd020c02647bc402b5db3c3cb376152005",
+    "snapshot_manifest_sha256": "735ce1e6e12bbba0be9c4cf1230e427a2c423e14c0711e792a7396c608ef486b",
+    "load_receipt_sha256": "3add2107d24c0579f96072b50bcea5b71895b6dc161e880d5689f5b498f8facd",
+    "active_after_drill": "fyp_run04_v42"
+  },
+  "evidence": {
+    "prior_six_tree_e2e_gate_receipt_sha256": "1e0895ec3fe739fcc2f33775ce76f6c3e1cab8f51844735bcb58aa32d0fbed95",
+    "phase3_gpu_receipt_sha256": "46598d00aff9b81a1b7e60a41d27faa02d26b0b182ce67d0e0767b5bb20cc441",
+    "active_config_smoke_receipt_sha256": "ff943b74d317f68b54c4f9d2fb80103e8332fd9988627ed5eaac0abc8d29bcfc",
+    "final_release_smoke_receipt_sha256": "2d82a967f2f74dde94ddb0d24295ab678a3c6ba981cdea9425c8d591598e4e3f",
+    "final_release_database_sha256": "ab20a6d1eaf1ec3a44db4a0bf7dfbd93ddaae05db0999168d0f68ac6e0c8d5eb",
+    "final_release_log_sha256": "60e0537bfe67d7f2accd385c48bbf2bc602dfc4cb88b46a0f99766827d297f9f",
+    "attempt01_harness_failure_sha256": "29b9c3ac46f1ea0a61ad0bc90beb32ef3be19fa7ef64396498a894f4727ee903"
+  },
+  "attempt01_disclosure": {
+    "status": "FAIL_HARNESS_ERROR_RESOLVED",
+    "hard_model_gate_reached": false,
+    "fail_closed_run01_restore": "PASS",
+    "corrected_attempt02": "PASS"
+  },
+  "remaining_risks": [
+    "The active Run04 checkpoint remains an absolute external path under /home/johny/durian_training; moving that repository will break loading.",
+    "The workspace intentionally remains dirty with pre-existing ROS2 fixes and untracked manifests/scripts; no commit protects those files.",
+    "Phase 3 used backend/config smoke tests and the prior exact-SHA six-tree E2E receipt; it did not repeat the full 22-minute Gazebo mission.",
+    "Production behavior outside the tested RTX 3050 Ti workstation remains unverified."
+  ],
+  "old_v41_fyp_run04_manifest_reused": false,
+  "training_performed": false,
+  "threshold_retuned": false,
+  "checkpoint_modified": false,
+  "dataset_modified": false,
+  "sealed_test_accessed": false,
+  "cleanup_performed": false,
+  "commit_created": false,
+  "push_performed": false
+}

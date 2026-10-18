@@ -1,0 +1,61 @@
+{
+  "schema_version": "durian.fyp.github_release_preflight.v1",
+  "status": "APPROVED_FINAL_RELEASE",
+  "approval_status": "EXPLICITLY_APPROVED_2026-10-18",
+  "target": {
+    "repository": "git@github.com:JohnyChia/fyp.git",
+    "branch": "main",
+    "verified_remote_base": "ad0dbbe54ab6b323627e734d4b8a178e6e827336"
+  },
+  "production": {
+    "backend": "fyp_run04_v42",
+    "active_config_path": "src/durian_inspection_pkg/config/leaf_detector_deployment.yaml",
+    "active_config_sha256": "f2d159baeaa135c536b552e2919106fafd455f4f91ee7807ce21d4c27dd9e9c4",
+    "checkpoint_sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+    "threshold": 0.45,
+    "device_policy": "cuda_required",
+    "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642"
+  },
+  "model_repository": {
+    "repository": "git@github.com:JohnyChia/durian_training.git",
+    "branch": "model-synthetic-and-hybrid",
+    "commit": "d673a31b09543fb4e7aca4bb10bb22b6bfc76bd1",
+    "checkpoint_bytes_in_this_release": 0,
+    "additional_lfs_bytes_in_this_release": 0
+  },
+  "dataset_lineage": {
+    "v42_correction_manifest_sha256": "b634760affc11ce33f4dcbda5904aa4c482480824a3650b2d70b9add45a062bd",
+    "dataset_bytes_in_this_release": 0,
+    "sealed_test_accessed": false,
+    "sealed_test_included": false
+  },
+  "rollback": {
+    "run_id": "Run01",
+    "checkpoint_sha256": "b7e221be1716737941f9ac0bfeab832e6fce67f405a1d0f133287ce84e2b4ef0",
+    "configuration_sha256": "28f157300d187ad63e57a1658fca3cfd020c02647bc402b5db3c3cb376152005",
+    "snapshot_manifest_sha256": "735ce1e6e12bbba0be9c4cf1230e427a2c423e14c0711e792a7396c608ef486b",
+    "snapshot_files_verified": "8/8",
+    "cuda_load_drill": "PASS"
+  },
+  "branch_safety": {
+    "local_main_based_on_fyp_main": false,
+    "local_main_tracking_remote_is_correct": false,
+    "normal_push_allowed": false,
+    "force_push_allowed": false,
+    "required_commit_parent": "ad0dbbe54ab6b323627e734d4b8a178e6e827336",
+    "working_tree_or_index_may_be_replaced": false
+  },
+  "file_integrity_manifest": "docs/releases/fyp-final-20261018/SHA256SUMS",
+  "exclusions": [
+    "datasets",
+    "sealed-test data",
+    "model checkpoint bytes",
+    "runtime databases and logs",
+    "captured and processed images",
+    "build/install/log trees",
+    "virtual environments and caches",
+    "local backup bundles",
+    "stale V4.1 Run02/Run04/Run06 deployment manifests"
+  ],
+  "publication_authority": "Git history of JohnyChia/fyp main"
+}

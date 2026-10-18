@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "release_schema": "durian.run04_v42.production_release.v1",
+  "candidate": "fyp_run04_v42",
+  "status": "AVAILABLE",
+  "deployment_status": "PASS",
+  "release_state": "ACTIVE_PRODUCTION",
+  "filename": "best.pt",
+  "absolute_path": "/home/johny/durian_training/models_8run/model4_yolo26n_p2_hybrid/best.pt",
+  "sha256": "04fa8dc9fa7df9bb238ab42469dee857caedb1c36d2d02bdf252bb9e831bc6f5",
+  "file_size_bytes": 21205716,
+  "architecture": "Ultralytics YOLO26n-P2",
+  "framework": "ultralytics",
+  "framework_version": "8.4.152",
+  "source_experiment": "formal six-model engineering comparison Run04 V4.2 corrected Hybrid",
+  "native_inference_resolution": [640, 640],
+  "canonical_class_order": [
+    {"id": 0, "name": "leaf_algal"},
+    {"id": 1, "name": "leaf_blight"},
+    {"id": 2, "name": "leaf_colletotrichum"},
+    {"id": 3, "name": "leaf_healthy"},
+    {"id": 4, "name": "leaf_phomopsis"},
+    {"id": 5, "name": "leaf_rhizoctonia"}
+  ],
+  "class_table_sha256": "35143075880cba0d446cb16045a559657b14d5b984c209ea96d39bc00f180642",
+  "checkpoint_class_order_verification": "PASS",
+  "checkpoint_evidence": {
+    "foreground_classes": 6,
+    "registry_role": "ACTIVE_V4_2_ENGINEERING_PRODUCTION_MODEL"
+  },
+  "selected_validation_threshold": 0.45,
+  "device_policy": "cuda_required",
+  "resize_policy": "framework_native_rect_original_pixel_inverse_map",
+  "adapter_version": "frozen-common-evaluator-v1",
+  "runtime_smoke_verification": "PASS_ACTIVE_CONFIG_CUDA_BACKEND",
+  "release_evidence": {
+    "frozen_six_tree_e2e_receipt_sha256": "1e0895ec3fe739fcc2f33775ce76f6c3e1cab8f51844735bcb58aa32d0fbed95",
+    "phase3_gpu_resource_receipt_sha256": "46598d00aff9b81a1b7e60a41d27faa02d26b0b182ce67d0e0767b5bb20cc441",
+    "phase3_backend_smoke_receipt_sha256": "ff943b74d317f68b54c4f9d2fb80103e8332fd9988627ed5eaac0abc8d29bcfc",
+    "run01_rollback_load_receipt_sha256": "3add2107d24c0579f96072b50bcea5b71895b6dc161e880d5689f5b498f8facd"
+  },
+  "run01_rollback_status": "PASS_VERIFIED_AND_PRESERVED",
+  "old_v41_fyp_run04_manifest_reused": false,
+  "sealed_test_accessed": false,
+  "training_performed": false,
+  "threshold_retuned": false
+}
